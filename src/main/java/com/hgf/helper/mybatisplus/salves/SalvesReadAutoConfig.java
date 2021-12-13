@@ -16,23 +16,21 @@ import javax.sql.DataSource;
  * 读写分离自动配置类
  */
 @Configuration
+@ConditionalOnProperty(value = "db.more")
 public class SalvesReadAutoConfig {
 
     @Bean
-    @ConditionalOnProperty(value = "db.more")
     public DataSource dataSource(DataSourceProperties dataSourceProperties, MoreSalvesDataSourceConfig moreSalvesDataSourceConfig) {
         return new DyDataSource(dataSourceProperties, moreSalvesDataSourceConfig);
     }
 
     @Bean
-    @ConditionalOnProperty(value = "db.more")
     public MoreSalvesDataSourceConfig moreSalvesDataSourceConfig(){
         return new MoreSalvesDataSourceConfig();
     }
 
 
     @Bean
-    @ConditionalOnProperty(value = "db.more")
     public SqlSessionTemplate sqlSessionTemplate(SqlSessionFactory sqlSessionFactory, MybatisProperties properties) {
         ExecutorType executorType = properties.getExecutorType();
         if (executorType != null) {

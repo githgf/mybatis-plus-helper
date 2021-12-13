@@ -33,6 +33,10 @@ import java.util.*;
     @Signature(type = StatementHandler.class, method = "batch", args = { Statement.class })})
 public class SqlCostInterceptor implements Interceptor {
 
+    protected static final String ENV_PRINT_QUERY = "mp.printQuery";
+    protected static final String ENV_BIG_SIZE = "mp.bigListSize";
+    protected static final String ENV_EXEC_TIMEOUT_WARN = "mp.execTimeOut";
+
     @Autowired
     Environment environment;
 
@@ -53,12 +57,12 @@ public class SqlCostInterceptor implements Interceptor {
      * 打印sql 日志
      * 如果耗时还是没解决考虑异步
      */
-    public void printSqlLog(long startTime, StatementHandler statementHandler) {
+    protected void printSqlLog(long startTime, StatementHandler statementHandler) {
         BoundSql boundSql = statementHandler.getBoundSql();
         Object parameterObject = boundSql.getParameterObject();
         String sql = boundSql.getSql().trim();
 
-        Boolean enable = environment.getProperty("mp.printQuery", Boolean.class);
+        Boolean enable = environment.getProperty(ENV_PRINT_QUERY, Boolean.class);
 
         // 不打印查询sql日志
         if (sql.toLowerCase().startsWith("select") && BooleanUtils.isFalse(enable)) {
@@ -98,23 +102,39 @@ public class SqlCostInterceptor implements Interceptor {
 
         long printCost = System.currentTimeMillis() - endTime;
 
-        log.info("SQL：[{}]  执行耗时    [ {} ms]  {} [ {} ms] ", allSql, sqlCost, printCost > 100 ? "打印耗时长警告" : "打印耗时", printCost);
-//        ActiveSpan.info("SQL：[" + allSql + "]   执行耗时    [" + sqlCost + "ms]");
+        printSql(allSql, sqlCost, printCost);
+    }
+
+    /**
+     * 打印sql
+     * @param allSql                sql语句
+     * @param sqlCost               sql执行用时(ms)
+     * @param printCost             sql打印用时(ms)
+     */
+    protected void printSql(String allSql, long sqlCost, long printCost) {
+        int timeout = environment.getProperty(ENV_EXEC_TIMEOUT_WARN, Integer.class, 100);
+
+
+        log.info("SQL：[{}]  执行耗时    [ {} ms]  {} [ {} ms] ", allSql, sqlCost, printCost > timeout ? "打印耗时长警告" : "打印耗时", printCost);
+
     }
 
     /**
      * 验证当前参数是长度很大的list
      */
-    public boolean verifyBigArray(Object paramObj) {
+    protected boolean verifyBigArray(Object paramObj) {
         if (!(paramObj instanceof DefaultSqlSession.StrictMap)) {
             return false;
         }
+
+        int bigSize = environment.getProperty(ENV_BIG_SIZE, Integer.class, 2);
+
 
         DefaultSqlSession.StrictMap strictMap = (DefaultSqlSession.StrictMap) paramObj;
         Object collection = strictMap.get("collection");
         if (collection != null && (collection instanceof Collection)) {
             Collection collection1 = (Collection) collection;
-            return collection1.size() > 2;
+            return collection1.size() > bigSize;
         }
         return false;
 
@@ -135,7 +155,7 @@ public class SqlCostInterceptor implements Interceptor {
      * 格式化sql语句（备选方案）
      */
     @SuppressWarnings("unchecked")
-    private String formatSql(String sql, Object parameterObject, List<ParameterMapping> parameterMappingList) {
+    protected String formatSql(String sql, Object parameterObject, List<ParameterMapping> parameterMappingList) {
         // 输入sql字符串空判断
         if (sql == null || sql.length() == 0) {
             return "";
@@ -185,7 +205,7 @@ public class SqlCostInterceptor implements Interceptor {
     /**
      * 美化Sql
      */
-    private String beautifySql(String sql) {
+    protected String beautifySql(String sql) {
         sql = sql.replace("\n", "").replace("\t", "").replace("  ", " ").replace("( ", "(").replace(" )", ")").replace(" ,", ",");
 
         return sql;
@@ -194,7 +214,7 @@ public class SqlCostInterceptor implements Interceptor {
     /**
      * 处理参数为List的场景
      */
-    private String handleListParameter(String sql, Collection<?> col) {
+    protected String handleListParameter(String sql, Collection<?> col) {
         if (col != null && col.size() != 0) {
             for (Object obj : col) {
                 String value = null;
@@ -218,7 +238,7 @@ public class SqlCostInterceptor implements Interceptor {
     /**
      * 处理mybatis 参数
      */
-    private String handleMybatisMapParameter(String sql, MapperMethod.ParamMap paramMap, List<ParameterMapping> parameterMappingList){
+    protected String handleMybatisMapParameter(String sql, MapperMethod.ParamMap paramMap, List<ParameterMapping> parameterMappingList){
         Map<String, Object> nameValuePairs = null;
         Collection values = paramMap.values();
 
@@ -269,7 +289,7 @@ public class SqlCostInterceptor implements Interceptor {
     /**
      * 处理参数为Map的场景
      */
-    private String handleMapParameter(String sql, Map<?, ?> paramMap, List<ParameterMapping> parameterMappingList) {
+    protected String handleMapParameter(String sql, Map<?, ?> paramMap, List<ParameterMapping> parameterMappingList) {
 
         if (paramMap instanceof MapperMethod.ParamMap) {
             return handleMybatisMapParameter(sql, (MapperMethod.ParamMap) paramMap, parameterMappingList);
@@ -295,7 +315,7 @@ public class SqlCostInterceptor implements Interceptor {
     /**
      * 处理通用的场景
      */
-    private String handleCommonParameter(String sql, List<ParameterMapping> parameterMappingList, Class<?> parameterObjectClass,
+    protected String handleCommonParameter(String sql, List<ParameterMapping> parameterMappingList, Class<?> parameterObjectClass,
             Object parameterObject) throws Exception {
         for (ParameterMapping parameterMapping : parameterMappingList) {
             String propertyValue = null;
@@ -323,7 +343,7 @@ public class SqlCostInterceptor implements Interceptor {
     /**
      * 是否基本数据类型或者基本数据类型的包装类
      */
-    private boolean isPrimitiveOrPrimitiveWrapper(Class<?> parameterObjectClass) {
+    protected boolean isPrimitiveOrPrimitiveWrapper(Class<?> parameterObjectClass) {
         return parameterObjectClass.isPrimitive() ||
                 (parameterObjectClass.isAssignableFrom(Byte.class) || parameterObjectClass.isAssignableFrom(Short.class) ||
                         parameterObjectClass.isAssignableFrom(Integer.class) || parameterObjectClass.isAssignableFrom(Long.class) ||
@@ -334,14 +354,14 @@ public class SqlCostInterceptor implements Interceptor {
     /**
      * 是否DefaultSqlSession的内部类StrictMap
      */
-    private boolean isStrictMap(Class<?> parameterObjectClass) {
+    protected boolean isStrictMap(Class<?> parameterObjectClass) {
         return parameterObjectClass.isAssignableFrom(DefaultSqlSession.StrictMap.class);
     }
 
     /**
      * 是否List的实现类
      */
-    private boolean isList(Class<?> clazz) {
+    protected boolean isList(Class<?> clazz) {
         Class<?>[] interfaceClasses = clazz.getInterfaces();
         for (Class<?> interfaceClass : interfaceClasses) {
             if (interfaceClass.isAssignableFrom(List.class)) {
@@ -355,7 +375,7 @@ public class SqlCostInterceptor implements Interceptor {
     /**
      * 是否Map的实现类
      */
-    private boolean isMap(Class<?> parameterObjectClass) {
+    protected boolean isMap(Class<?> parameterObjectClass) {
         if (parameterObjectClass.getName().equals(MapperMethod.ParamMap.class.getName())) {
             return true;
         }
@@ -372,7 +392,7 @@ public class SqlCostInterceptor implements Interceptor {
     /**
      * 获取完整的sql（推荐方案）
      */
-    public String getFllSql(BoundSql boundSql, Object parameterObject) {
+    protected String getFllSql(BoundSql boundSql, Object parameterObject) {
         SqlSessionFactory bean = BaseSpringContext.getBean(SqlSessionFactory.class);
         if (bean == null) {
             return null;
@@ -420,7 +440,7 @@ public class SqlCostInterceptor implements Interceptor {
         return beautifySql(sql);
     }
 
-    public String formatParamValue(Object paramValue) {
+    protected String formatParamValue(Object paramValue) {
         if (paramValue == null) {
             return "null";
         }
