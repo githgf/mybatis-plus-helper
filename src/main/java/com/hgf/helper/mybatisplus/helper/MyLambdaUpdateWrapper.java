@@ -171,7 +171,7 @@ public class MyLambdaUpdateWrapper<T> extends AbstractLambdaWrapper<T, MyLambdaU
         StringBuilder stringBuilder = new StringBuilder();
         int paramIndex = 0;
         for (Object o : caseMap.keySet()) {
-            stringBuilder.append(String.format("WHEN {%d} THEN {%d}", paramIndex++, paramIndex++)).append("\n");
+            stringBuilder.append(String.format(" WHEN {%d} THEN {%d}", paramIndex++, paramIndex++)).append("\n");
             params.add(o);
             params.add(caseMap.get(o));
         }
