@@ -1,5 +1,6 @@
 package com.hgf.helper.mybatisplus.inject;
 
+import com.baomidou.mybatisplus.core.enums.SqlMethod;
 import com.baomidou.mybatisplus.core.metadata.TableInfo;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import com.baomidou.mybatisplus.core.toolkit.sql.SqlScriptUtils;
@@ -11,11 +12,13 @@ import com.hgf.helper.mybatisplus.utils.ReflectUtil;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.builder.MapperBuilderAssistant;
 import org.apache.ibatis.executor.keygen.NoKeyGenerator;
 import org.apache.ibatis.mapping.*;
 
 import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.*;
@@ -119,16 +122,42 @@ public class SelectTargetObjects extends AbstractJoinSelectMethod {
 
 
         ResultMap resultMap = resultMapperBuilder.wrapperResultMap(resultClass, mainEntityClass);
+        boolean useJoin = false;
+        Parameter[] parameters = method.getParameters();
+        for (Parameter parameter : parameters) {
+            Param param = parameter.getAnnotation(Param.class);
+            if (param == null) {
+                continue;
+            }
 
+            useJoin = param.getClass().isAssignableFrom(JoinLambdaQueryWrapper.class);
+            if (useJoin) {
+                break;
+            }
 
-        String sql = String.format(sqlScriptTemp(),
-                sqlFirst(),
-                sqlSelectColumns(),
-                mainTableInfo.getTableName(),
-                getJoinSql(),
-                sqlWhereEntityWrapper(true, mainTableInfo),
-                sqlComment()
-        );
+        }
+
+        String sql = null;
+        if (useJoin) {
+            // 联查sql
+            sql = String.format(sqlScriptTemp(),
+                    sqlFirst(),
+                    sqlSelectColumns(),
+                    mainTableInfo.getTableName(),
+                    getJoinSql(),
+                    sqlWhereEntityWrapper(true, mainTableInfo),
+                    sqlComment()
+            );
+        }else {
+
+            sql = String.format(SqlMethod.SELECT_LIST.getSql(),
+                    sqlFirst(),
+                    sqlSelectColumns(),
+                    mainTableInfo.getTableName(),
+                    sqlWhereEntityWrapper(true, mainTableInfo),
+                    sqlComment()
+            );
+        }
 
         SqlSource sqlSource = languageDriver.createSqlSource(configuration, sql, mainEntityClass);
 
