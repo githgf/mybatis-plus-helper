@@ -130,7 +130,7 @@ public class SelectTargetObjects extends AbstractJoinSelectMethod {
                 continue;
             }
 
-            useJoin = param.getClass().isAssignableFrom(JoinLambdaQueryWrapper.class);
+            useJoin = parameter.getType().isAssignableFrom(JoinLambdaQueryWrapper.class);
             if (useJoin) {
                 break;
             }
