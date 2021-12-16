@@ -114,12 +114,6 @@ public class BaseServiceImpl<M extends BaseMapper<T>, T extends BaseEntity> exte
      * @return
      */
     protected <E extends IPage<T>> E selectPage(E page, @Param(Constants.WRAPPER) Wrapper<T> queryWrapper) {
-        if (page instanceof Page) {
-            Page pageRef = (Page) page;
-            if (CollectionUtil.isEmpty(pageRef.getOrders())) {
-                pageRef.addOrder(OrderItem.desc("create_time"));
-            }
-        }
         return baseMapper.selectPage(page, queryWrapper);
     }
 
