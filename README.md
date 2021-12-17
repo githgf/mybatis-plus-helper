@@ -30,6 +30,25 @@
    <artifactId>mybatis-plus-helper</artifactId>
    <version>0.0.2</version>
 </dependency>
+
+<dependency>
+   <groupId>com.baomidou</groupId>
+   <artifactId>mybatis-plus-boot-starter</artifactId>
+   <version>3.4.1</version>
+</dependency>
+
+
+<dependency>
+   <groupId>org.mybatis.spring.boot</groupId>
+   <artifactId>mybatis-spring-boot-starter</artifactId>
+   <version>2.0.1</version>
+</dependency>
+
+<dependency>
+   <groupId>com.baomidou</groupId>
+   <artifactId>mybatis-plus-generator</artifactId>
+   <version>3.4.1</version>
+</dependency>
 ```
 ## 源码构建安装
 
