@@ -18,8 +18,26 @@
 [mybatis-plus-helper-demo地址](https://gitee.com/hanscoding/mybatis-plus-helper-demo.git)
 
 
+# 安装方式
+
+## pom文件引入依赖
+
+最新版本：0.0.2
+
+```xml
+<dependency>
+   <groupId>io.github.githgf</groupId>
+   <artifactId>mybatis-plus-helper</artifactId>
+   <version>0.0.2</version>
+</dependency>
+```
+## 源码构建安装
+
+下载源码之后可以修改pom文件提交到自己私服，或者本地install
+
 
 # 使用文档
+
 
 ## 格式化打印执行的sql语句
 
