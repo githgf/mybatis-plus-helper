@@ -92,6 +92,11 @@ public class MybatisPlusConfig {
 
 # 多表联查
 
+## 适配的数据库类型
+
+ - mysql
+
+
 ## 使用方式
 
 spring引入`JoinHelperStartHook`,`HSqlInject`
