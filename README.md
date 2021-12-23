@@ -22,13 +22,13 @@
 
 ## pom文件引入依赖
 
-最新版本：0.0.2
+
 
 ```xml
 <dependency>
    <groupId>io.github.githgf</groupId>
    <artifactId>mybatis-plus-helper</artifactId>
-   <version>0.0.2</version>
+   <version>0.0.3</version>
 </dependency>
 
 <dependency>
@@ -155,6 +155,8 @@ public class Student extends BaseEntity {
             whereStrategy = FieldStrategy.NEVER
     )
     @Association()
+  	// 可选
+  	@MpJoinColumn(mainFieldName = "no",refFieldName = "stuNo")
     ScoreInfo score;
 
     public void setName(String name) {
@@ -176,6 +178,8 @@ public class ResultVo {
     private Student student;
 
     @Association(aliasPrefix = "score_")
+    // 可选
+    @MpJoinColumn(mainFieldName = "no",refFieldName = "stuNo")
     private ScoreInfo scoreInfo;
 
 
@@ -197,8 +201,14 @@ service 代码，在`com.hgf.helper.mybatisplusdemo.db.service.StudentServiceImp
 public List<Student> joinListTest() {
   // 主表wrapper
   JoinLambdaQueryWrapper<Student> studentWrapper = joinQueryWrapperForTable();
-  // 副表wrapper
-  JoinLambdaQueryWrapper<ScoreInfo> scoreWrapper = studentWrapper.innerJoin(ScoreInfo.class, Student::getNo, ScoreInfo::getStuNo);
+        // 副表wrapper
+  JoinLambdaQueryWrapper<ScoreInfo> scoreWrapper = studentWrapper.join(
+                JoinQueryBuilder.<ScoreInfo, Student, Student>builder()
+                        .joinEnum(JoinEnum.INNER)
+                        .joinColumnAnnFiled(Student::getScore)
+                        .build()
+        );
+
 
   // 查询指定字段
   //        studentWrapper.select(Student::getNo);
