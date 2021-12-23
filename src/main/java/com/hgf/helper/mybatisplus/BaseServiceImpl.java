@@ -129,6 +129,9 @@ public class BaseServiceImpl<M extends BaseMapper<T>, T extends BaseEntity> exte
             if (updateWrapper instanceof LambdaUpdateWrapper) {
                 LambdaUpdateWrapper<T> lambdaUpdateWrapper = (LambdaUpdateWrapper<T>) updateWrapper;
                 lambdaUpdateWrapper.set(T::getUpdateTime, new Date());
+            } else if (updateWrapper instanceof MyLambdaUpdateWrapper) {
+                MyLambdaUpdateWrapper<T> lambdaUpdateWrapper = (MyLambdaUpdateWrapper<T>) updateWrapper;
+                lambdaUpdateWrapper.set(T::getUpdateTime, new Date());
             }
 
         }

@@ -3,9 +3,6 @@ package com.hgf.helper.mybatisplus.join;
 import lombok.Getter;
 import lombok.Setter;
 
-/**
- * 多表连接信息
- */
 @Setter
 @Getter
 public class JoinSqlInfo {
@@ -34,8 +31,10 @@ public class JoinSqlInfo {
      */
     String mainTableName;
 
+    String joinTableAlias;
+
     public String sql(){
-        return String.format("%s join %s on %s.%s = %s.%s", joinType, joinTableName, mainTableName, mainTableColumn, joinTableName, joinTableColumn);
+        return String.format("%s join %s %s on %s.%s = %s.%s", joinType, joinTableName, joinTableAlias, mainTableName, mainTableColumn, joinTableAlias, joinTableColumn);
     }
 
 }

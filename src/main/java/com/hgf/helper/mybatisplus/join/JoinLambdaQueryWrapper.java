@@ -3,7 +3,6 @@ package com.hgf.helper.mybatisplus.join;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.conditions.segments.MergeSegments;
 import com.baomidou.mybatisplus.core.enums.SqlKeyword;
-import com.baomidou.mybatisplus.core.metadata.TableFieldInfo;
 import com.baomidou.mybatisplus.core.metadata.TableInfo;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import com.baomidou.mybatisplus.core.toolkit.ArrayUtils;
@@ -15,14 +14,13 @@ import com.baomidou.mybatisplus.core.toolkit.support.SerializedLambda;
 import com.hgf.helper.mybatisplus.helper.MyLambdaQueryWrapper;
 import com.hgf.helper.mybatisplus.helper.SelectBuilder;
 import com.hgf.helper.mybatisplus.utils.CollectionUtil;
-import com.hgf.helper.mybatisplus.utils.ReflectUtil;
 import lombok.Getter;
 import lombok.Setter;
 import org.apache.ibatis.reflection.property.PropertyNamer;
 import org.springframework.util.StringUtils;
 
-import java.lang.reflect.Field;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -32,12 +30,16 @@ import static com.baomidou.mybatisplus.core.toolkit.StringPool.COMMA;
 
 /**
  * 多表联查
+ *
  * @param <T>
  */
 
 @Setter
 @Getter
 public class JoinLambdaQueryWrapper<T> extends MyLambdaQueryWrapper<T> {
+    public static final String PARAM_NAME_VALUE_PAIRS_FIELD = "paramNameValuePairs";
+    public static final String PARAM_MAP_FIELD = "paramValMap";
+
 
     /**
      * 连接类型
@@ -79,7 +81,6 @@ public class JoinLambdaQueryWrapper<T> extends MyLambdaQueryWrapper<T> {
 
     /**
      * 缓存 的 查询column sql
-     *
      */
     private String selectSqlCache;
 
@@ -107,101 +108,48 @@ public class JoinLambdaQueryWrapper<T> extends MyLambdaQueryWrapper<T> {
      */
     private Class<?> queryType;
 
-    Map<JoinLambdaQueryWrapper<?>,JoinSqlInfo> wrapperMap = new HashMap<>();
+    Map<JoinLambdaQueryWrapper<?>, JoinSqlInfo> wrapperMap = new HashMap<>();
 
-    /**
-     * 左链接
-     * @param entity                副表实体类
-     * @param mainJoinField         主表join字段
-     * @param joinField             副表join字段
-     */
-    public <K> JoinLambdaQueryWrapper<K> leftJoin(Class<K> entity, SFunction<T, ?> mainJoinField, SFunction<K, ?> joinField) {
-        return join(JoinEnum.LEFT, entity, mainJoinField, joinField);
-    }
-
-    /**
-     * 右链接
-     * @param entity                副表实体类
-     * @param mainJoinField         主表join字段
-     * @param joinField             副表join字段
-     */
-    public <K> JoinLambdaQueryWrapper<K> rightJoin( Class<K> entity,  SFunction<T, ?> mainJoinField, SFunction<K, ?> joinField) {
-        return join(JoinEnum.RIGHT, entity, mainJoinField, joinField);
-    }
-
-    public <K> JoinLambdaQueryWrapper<K> innerJoin( Class<K> entity,  SFunction<T, ?> mainJoinField, SFunction<K, ?> joinField) {
-        return join(JoinEnum.INNER, entity, mainJoinField, joinField);
-    }
+    Map<String, JoinLambdaQueryWrapper<?>> paramValMap = new HashMap<>();
 
 
-    public boolean existsWrapper(Class<?> clazz) {
-        return wrapperMap.keySet().stream().filter(t -> t.getEntityClass().equals(clazz)).findFirst().map(k -> true).orElse(false);
+    public boolean existsWrapper(String tableAlias) {
+        return wrapperMap.keySet().stream().filter(t -> t.getTableAlias().equals(tableAlias)).findFirst().map(k -> true).orElse(false);
     }
 
 
     /**
      * 连接查询
-     * @param joinEnum                  连接类型
-     * @param mainJoinFieldFunc         主表实体类属性名
-     * @param joinFieldFunc             附表实体类属性名
      */
-    public <K> JoinLambdaQueryWrapper<K> join(JoinEnum joinEnum, Class<K> entity, SFunction<T, ?> mainJoinFieldFunc, SFunction<K, ?> joinFieldFunc) {
+    public <K,E> JoinLambdaQueryWrapper<K> join(JoinQueryBuilder<K,T,E> builder) {
+        JoinColumnInfo joinColumnInfo = JoinColumnParseHelper.wrapperJoinColumnInfo(builder, isQueryTargetEntityResult ? queryType : super.getEntityClass(), isQueryTargetEntityResult, super.getEntityClass());
 
-        if (existsWrapper(entity)) {
+
+        String joinTableColumnPrefix = JoinTableHelper.getJoinTableColumnPrefix(joinColumnInfo.getQueryTypeJoinField());
+        // 已经存在此连接关系
+        if (existsWrapper(joinTableColumnPrefix)) {
             return null;
         }
 
-        JoinLambdaQueryWrapper<K> lambdaQueryWrapper = new JoinLambdaQueryWrapper<>(entity, null);
+        Class<K> joinEntityClass = (Class<K>) joinColumnInfo.getJoinEntityClass();
 
-        String mainJoinField = getColumn(LambdaUtils.resolve(mainJoinFieldFunc), true);
-        String joinField = lambdaQueryWrapper.getColumn(LambdaUtils.resolve(joinFieldFunc), true);
-
-        lambdaQueryWrapper.setJoinFlag(joinEnum.getSql());
-        Class<T> entityClass = super.getEntityClass();
-        TableInfo tableInfo = TableInfoHelper.getTableInfo(entityClass);
-        Field field = null;
-
-        // 自动从 lambdaQueryWrapper 推测链接附表的实体类型
-        if (isQueryTargetEntityResult && queryType != null) {
-            for (Field declaredField : queryType.getDeclaredFields()) {
-                Class<?> aClass = ReflectUtil.getFieldRealType(declaredField);
-                if (aClass != null && aClass.equals(lambdaQueryWrapper.getEntityClass())) {
-                    field = declaredField;
-                    break;
-                }
-            }
-        }
-
-        if (field == null) {
-
-            field  = tableInfo.getFieldList()
-                    .stream()
-                    .filter(t -> {
-                        Field declaredField = t.getField();
-                        Class<?> aClass = ReflectUtil.getFieldRealType(declaredField);
-                        return aClass != null && aClass.equals(lambdaQueryWrapper.getEntityClass());
-                    }).findFirst()
-                    .map(TableFieldInfo::getField).orElse(null);
-        }
-
-
-        if (field == null) {
-            throw new RuntimeException("alias column not found");
-        }
-
-        String joinTableColumnPrefix = JoinTableHelper.getJoinTableColumnPrefix(field);
+        JoinLambdaQueryWrapper<K> lambdaQueryWrapper = new JoinLambdaQueryWrapper<>(joinEntityClass, null);
         lambdaQueryWrapper.setAliasPrefix(joinTableColumnPrefix);
-
+        lambdaQueryWrapper.setJoinFlag(builder.getJoinEnum().getSql());
 
         JoinSqlInfo joinSqlInfo = new JoinSqlInfo();
-        joinSqlInfo.setJoinType(joinEnum.getSql());
-        joinSqlInfo.setMainTableColumn(mainJoinField);
-        joinSqlInfo.setJoinTableColumn(joinField);
+        joinSqlInfo.setJoinType(builder.getJoinEnum().getSql());
+        joinSqlInfo.setMainTableColumn(joinColumnInfo.getMainTableColumn());
+        joinSqlInfo.setJoinTableColumn(joinColumnInfo.getJoinTableColumn());
         joinSqlInfo.setJoinTableName(lambdaQueryWrapper.getTableName());
         joinSqlInfo.setMainTableName(this.tableName);
+        joinSqlInfo.setJoinTableAlias(joinTableColumnPrefix);
 
 
         wrapperMap.put(lambdaQueryWrapper, joinSqlInfo);
+        paramValMap.put(lambdaQueryWrapper.getTableAlias(), lambdaQueryWrapper);
+
+
         return lambdaQueryWrapper;
     }
 
@@ -215,7 +163,13 @@ public class JoinLambdaQueryWrapper<T> extends MyLambdaQueryWrapper<T> {
         initTableName();
     }
 
-    public void initTableName(){
+    JoinLambdaQueryWrapper(Class<T> entityClass, Class<?> queryType, AtomicInteger paramNameSeq, Map<String, Object> paramNameValuePairs) {
+        this(entityClass, queryType);
+        this.paramNameSeq = paramNameSeq;
+        this.paramNameValuePairs = paramNameValuePairs;
+    }
+
+    public void initTableName() {
         TableInfo tableInfo = TableInfoHelper.getTableInfo(super.getEntityClass());
         if (tableInfo == null) {
             throw new RuntimeException("tableInfo not found");
@@ -267,7 +221,7 @@ public class JoinLambdaQueryWrapper<T> extends MyLambdaQueryWrapper<T> {
             for (String field : columnMap.keySet()) {
 
                 ColumnCache columnCache = columnMap.get(field);
-                columnCache.setColumnSelect(tableName + "." + columnCache.getColumn());
+                columnCache.setColumnSelect(getTableAlias() + "." + columnCache.getColumn());
             }
 
             initColumnMap = true;
@@ -287,7 +241,7 @@ public class JoinLambdaQueryWrapper<T> extends MyLambdaQueryWrapper<T> {
      * 查询 column sql
      */
     @Override
-    public String getSqlSelect(){
+    public String getSqlSelect() {
 
         if (isCachedSelectSql) {
             return selectSqlCache;
@@ -299,9 +253,9 @@ public class JoinLambdaQueryWrapper<T> extends MyLambdaQueryWrapper<T> {
         String mainSql = null;
         if (CollectionUtil.isEmpty(parts)) {
             mainSql = getFullColumnSqlSelect();
-        }else {
+        } else {
             mainSql = parts.stream()
-                    .map(t -> builderSelectSegment(t, tableName))
+                    .map(t -> builderSelectSegment(t))
                     .collect(Collectors.joining(COMMA));
         }
 
@@ -326,7 +280,7 @@ public class JoinLambdaQueryWrapper<T> extends MyLambdaQueryWrapper<T> {
     /**
      * 拼接 join sql
      */
-    public String getJoinSql(){
+    public String getJoinSql() {
         if (isInitJoinSql) {
             return joinSql;
         }
@@ -341,17 +295,25 @@ public class JoinLambdaQueryWrapper<T> extends MyLambdaQueryWrapper<T> {
     @Override
     public String getSqlSegment() {
 
-        String sql = this.wrapperMap.keySet().stream().map(t -> t.getExpression().getSqlSegment()).collect(Collectors.joining("\n"));
+        String sql = this.wrapperMap.keySet().stream().map(t -> formatSqlSegment(t.getExpression().getSqlSegment(),t.getTableAlias())).collect(Collectors.joining(" ")).trim();
 
+        if (!StringUtils.isEmpty(sql)) {
+            sql = String.format(" %s %s ", SqlKeyword.AND.getSqlSegment(), sql);
+        }
         String otherSegment = getOtherSegment();
 
         return String.format("%s \n %s %s", expression.getSqlSegment() + otherSegment, sql, lastSql.getStringValue());
     }
 
+    protected String formatSqlSegment(String origin,String tableAlias) {
+
+        return origin.replace(PARAM_NAME_VALUE_PAIRS_FIELD, String.format("%s.%s.%s",PARAM_MAP_FIELD, tableAlias, PARAM_NAME_VALUE_PAIRS_FIELD));
+    }
+
     /**
-     * 获取附表的sql 片段
+     * 获取附表的 GROUP\HAVING\ORDER sql 片段
      */
-    public String getOtherSegment(){
+    public String getOtherSegment() {
         if (otherSqlMergeSegments != null) {
             return otherSqlMergeSegments.getSqlSegment();
         }
@@ -407,11 +369,10 @@ public class JoinLambdaQueryWrapper<T> extends MyLambdaQueryWrapper<T> {
         return nonEmptyOfNormal() || wrapperMap.keySet().stream().filter(Wrapper::nonEmptyOfNormal).findFirst().map(Wrapper::nonEmptyOfNormal).orElse(false);
     }
 
-
     /**
      * 拼接全部字段的sql 查询
      */
-    public String getFullColumnSqlSelect(){
+    public String getFullColumnSqlSelect() {
 
         TableInfo mainTableInfo = TableInfoHelper.getTableInfo(super.getEntityClass());
 
@@ -429,14 +390,18 @@ public class JoinLambdaQueryWrapper<T> extends MyLambdaQueryWrapper<T> {
         return String.join(COMMA, mainSql, joinSql);*/
     }
 
-    public String builderSelectSegment(String column, String tableName) {
-        if (column.contains("as") && column.contains(tableName)) {
-            return column;
+    public String builderSelectSegment(String column) {
+        if (column.toLowerCase().contains(" as ")) {
+            if (column.contains(getTableAlias() + ".")) {
+                return column;
+            }else {
+                return getTableAlias() + "." + column;
+            }
         }
-        if (column.contains(tableName + ".")) {
+        if (column.contains(getTableAlias() + ".")) {
             return String.format("%s as `%s%s`", column, StringUtils.isEmpty(aliasPrefix) ? "" : aliasPrefix, column.split("\\.")[1]);
         }
-        return String.format("%s.%s as `%s%s`", tableName, column, StringUtils.isEmpty(aliasPrefix) ? "" : aliasPrefix, column);
+        return String.format("%s.%s as `%s%s`", getTableAlias(), column, StringUtils.isEmpty(aliasPrefix) ? "" : aliasPrefix, column);
 
     }
 
@@ -445,9 +410,10 @@ public class JoinLambdaQueryWrapper<T> extends MyLambdaQueryWrapper<T> {
      */
     public String wrapperAliasSelect(String originSql) {
         return Arrays.stream(originSql.split(COMMA))
-                .map(t -> builderSelectSegment(t, tableName))
+                .map(this::builderSelectSegment)
                 .collect(Collectors.joining(","));
     }
+
     @SafeVarargs
     @Override
     public final JoinLambdaQueryWrapper<T> groupBy(boolean condition, SFunction<T, ?>... columns) {
@@ -468,6 +434,11 @@ public class JoinLambdaQueryWrapper<T> extends MyLambdaQueryWrapper<T> {
         );
 
         return typedThis;
+    }
+
+    @Override
+    protected JoinLambdaQueryWrapper<T> instance() {
+        return new JoinLambdaQueryWrapper<>(getEntityClass(), getQueryType(), paramNameSeq, paramNameValuePairs);
     }
 
     @Override
@@ -553,4 +524,9 @@ public class JoinLambdaQueryWrapper<T> extends MyLambdaQueryWrapper<T> {
         this.otherSqlMergeSegments = null;
         this.queryType = null;
     }
+
+    public String getTableAlias() {
+        return StringUtils.isEmpty(aliasPrefix) ? tableName : aliasPrefix;
+    }
+
 }
