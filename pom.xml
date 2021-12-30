@@ -9,7 +9,7 @@
     </parent>
     <groupId>io.github.githgf</groupId>
     <artifactId>mybatis-plus-helper</artifactId>
-    <version>0.0.3</version>
+    <version>0.0.4</version>
     <name>mybatis-plus</name>
     <packaging>jar</packaging>
 
