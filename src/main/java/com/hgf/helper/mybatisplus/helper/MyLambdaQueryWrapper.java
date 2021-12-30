@@ -231,6 +231,30 @@ public class MyLambdaQueryWrapper<T> extends AbstractLambdaWrapper<T, MyLambdaQu
         return typedThis;
     }
 
+    /**
+     * 原始 select sql
+     */
+    @SafeVarargs
+    public final MyLambdaQueryWrapper<T> originSelectSql(String sqlFormat, SFunction<T,?>... sFunctions) {
+
+        Object[] objects = new Object[sFunctions.length];
+
+        for (int i = 0; i < sFunctions.length; i++) {
+            String column = columnToString(sFunctions[i]);
+
+            if (column != null) {
+                objects[i] = column;
+            }
+        }
+
+        if (!CollectionUtil.isEmpty(objects)) {
+            String format = String.format(sqlFormat, objects);
+            this.sqlSelect.getParts().add(format);
+        }
+
+        return typedThis;
+    }
+
     @Override
     public String columnToString(SFunction<T, ?> column) {
         return super.columnToString(column);
