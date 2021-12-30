@@ -253,6 +253,14 @@ public class BaseServiceImpl<M extends BaseMapper<T>, T extends BaseEntity> exte
         return retBool(baseMapper.deleteById(id));
     }
 
+    public boolean updateTargetFieldById(SFunction<T, ?> columns, Object value, Serializable id) {
+        LambdaUpdateWrapper<T> lambdaUpdate = getLambdaUpdate();
+        lambdaUpdate.eq(T::getId, id);
+        lambdaUpdate.set(columns, value);
+        return update(lambdaUpdate);
+
+    }
+
     @Override
     public Class<T> getEntityClass(){
         return super.entityClass;
