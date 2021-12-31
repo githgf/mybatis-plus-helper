@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import com.hgf.helper.mybatisplus.annotation.Association;
 import com.hgf.helper.mybatisplus.inject.SelectTargetObjects;
 import com.hgf.helper.mybatisplus.utils.CollectionUtil;
+import com.hgf.helper.mybatisplus.utils.ReflectUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.mapping.ResultMap;
 import org.apache.ibatis.mapping.ResultMapping;
@@ -88,8 +89,13 @@ public class JoinHelperStartHook implements ApplicationRunner {
                 continue;
             }
 
-            Class<?> associationFiletype = fieldInfo.getType();
-            TableInfo associationTableInfo = TableInfoHelper.getTableInfo(associationFiletype);
+            Class<?> joinEntityClass = fieldInfo.getType();
+
+            if (ReflectUtil.isList(joinEntityClass)) {
+                joinEntityClass = ReflectUtil.getRealListClass(fieldInfo.getGenericType());
+            }
+
+            TableInfo associationTableInfo = TableInfoHelper.getTableInfo(joinEntityClass);
             if (associationTableInfo == null) {
                 continue;
             }

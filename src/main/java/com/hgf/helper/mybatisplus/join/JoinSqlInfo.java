@@ -34,7 +34,7 @@ public class JoinSqlInfo {
     String joinTableAlias;
 
     public String sql(){
-        return String.format("%s join %s %s on %s.%s = %s.%s", joinType, joinTableName, joinTableAlias, mainTableName, mainTableColumn, joinTableAlias, joinTableColumn);
+        return String.format(" %s join %s %s on %s.%s = %s.%s ", joinType, joinTableName, joinTableAlias, mainTableName, mainTableColumn, joinTableAlias, joinTableColumn);
     }
 
 }
