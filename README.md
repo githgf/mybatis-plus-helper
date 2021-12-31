@@ -287,6 +287,9 @@ ResultVo getResultVo(@Param(Constants.WRAPPER) JoinLambdaQueryWrapper<Student> l
 
 
 
+### 注意：
+当查询是一对多时，多的结果只能是封装在数据库映射实体类中，如，`com.hgf.helper.mybatisplusdemo.db.entity.Student.rewardInfos`
+
 #  读写分离
 
 ## 使用方式
