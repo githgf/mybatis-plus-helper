@@ -31,12 +31,10 @@ public class JoinHelperStartHook implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) throws Exception {
+        handlerTableInfo();
         if (selectJoinTargetInject != null) {
             selectJoinTargetInject.autoAddMappedStatements();
-
         }
-
-        handlerTableInfo();
     }
 
 

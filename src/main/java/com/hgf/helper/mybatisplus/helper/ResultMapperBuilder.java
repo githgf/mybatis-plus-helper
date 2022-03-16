@@ -58,7 +58,13 @@ public class ResultMapperBuilder {
 
         ResultMap resultMap = null;
         try {
-            resultMap = configuration.getResultMap(resultMapId);
+            TableInfo tableInfo = TableInfoHelper.getTableInfo(resultClass);
+            if (tableInfo != null) {
+                resultMap = configuration.getResultMap(tableInfo.getResultMap());
+            }
+            if (resultMap == null) {
+                resultMap = configuration.getResultMap(resultMapId);
+            }
         } catch (Exception e) {
 
         }
@@ -71,7 +77,7 @@ public class ResultMapperBuilder {
             boolean isTableField = declaredField.isAnnotationPresent(TableField.class);
             boolean isAssociationField = declaredField.isAnnotationPresent(Association.class);
             ResultMapping resultMapping = null;
-            if (isTableField) {
+            if (isTableField && !isAssociationField) {
                 TableField tableField = declaredField.getAnnotation(TableField.class);
                 if (tableField.exist()) {
                     resultMapping = getTableFieldResultMapping(dbConfig, reflector, declaredField);
