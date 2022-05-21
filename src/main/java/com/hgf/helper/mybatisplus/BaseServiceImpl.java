@@ -11,6 +11,7 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.baomidou.mybatisplus.extension.toolkit.SqlHelper;
 import com.hgf.helper.mybatisplus.helper.MyLambdaQueryWrapper;
 import com.hgf.helper.mybatisplus.helper.MyLambdaUpdateWrapper;
 import com.hgf.helper.mybatisplus.join.JoinLambdaQueryWrapper;
@@ -105,6 +106,18 @@ public class BaseServiceImpl<M extends BaseMapper<T>, T extends BaseEntity> exte
         return new JoinLambdaQueryWrapper<>(kClass, null);
     }
 
+    /**
+     * 增加getJoinOne方法，防止直接调用baseMapper方法时查询多条结果异常
+     * @param queryWrapper
+     * @param throwEx
+     * @return
+     */
+    public T getJoinOne(JoinLambdaQueryWrapper<T> queryWrapper, boolean throwEx) {
+        if (baseMapper instanceof HBaseMapper) {
+            return throwEx ? ((HBaseMapper<T>)baseMapper).selectJoinOne(queryWrapper) : SqlHelper.getObject(super.log, ((HBaseMapper<T>)baseMapper).selectJoinList(queryWrapper));
+        }
+        throw new RuntimeException("the entity mapper is not extends HBaseMapper");
+    }
 
     /**
      * 分页查询
