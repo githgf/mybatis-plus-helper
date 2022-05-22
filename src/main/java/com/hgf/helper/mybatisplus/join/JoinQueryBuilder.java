@@ -14,7 +14,7 @@ import lombok.Getter;
  */
 @Getter
 @Builder
-public class JoinQueryBuilder<K,T,E> {
+public class JoinQueryBuilder<K,T,E> implements JoinQueryBase<K, T, E>{
     /**
      * 连接类型
      */

@@ -2,9 +2,11 @@ package com.hgf.helper.mybatisplus.join;
 
 import lombok.Getter;
 import lombok.Setter;
+import lombok.experimental.Accessors;
 
 @Setter
 @Getter
+@Accessors(chain = true)
 public class JoinSqlInfo {
     /**
      * 连接类型

@@ -25,7 +25,7 @@ public class JoinColumnParseHelper {
     /**
      * 封装 JoinColumnInfo
      */
-    public static JoinColumnInfo wrapperJoinColumnInfo(JoinQueryBuilder<?, ?, ?> builder, Class<?> wrapperClass, boolean isQueryTargetEntityResult, Class<?> mainEntityClass) {
+    public static JoinColumnInfo wrapperJoinColumnInfo(JoinQueryBase<?, ?, ?> builder, Class<?> wrapperClass, boolean isQueryTargetEntityResult, Class<?> mainEntityClass) {
 
         if (builder.getJoinColumnAnnFiled() != null) {
             return parseByJoinColumnAnnFieldFunc(builder.getJoinColumnAnnFiled(), mainEntityClass);
@@ -86,7 +86,7 @@ public class JoinColumnParseHelper {
         return columnMap.get(LambdaUtils.formatKey(fieldName));
     }
 
-    public static Field getQueryJoinWrapperField(JoinQueryBuilder<?, ?, ?> builder, Class<?> wrapperClass, boolean isQueryTargetEntityResult, Class<?> mainEntityClass) {
+    public static Field getQueryJoinWrapperField(JoinQueryBase<?, ?, ?> builder, Class<?> wrapperClass, boolean isQueryTargetEntityResult, Class<?> mainEntityClass) {
         SFunction<?, ?> mainJoinFieldFunc = builder.getMainJoinField();
         SFunction<?, ?> joinFieldFunc = builder.getJoinField();
         if (joinFieldFunc == null || mainJoinFieldFunc == null) {
@@ -156,7 +156,7 @@ public class JoinColumnParseHelper {
     /**
      * 封装 JoinColumnInfo
      */
-    public static JoinColumnInfo parseByQueryJoinWrapperField(JoinQueryBuilder<?, ?, ?> builder, Class<?> wrapperClass, boolean isQueryTargetEntityResult, Class<?> mainEntityClass) {
+    public static JoinColumnInfo parseByQueryJoinWrapperField(JoinQueryBase<?, ?, ?> builder, Class<?> wrapperClass, boolean isQueryTargetEntityResult, Class<?> mainEntityClass) {
         Field field = getQueryJoinWrapperField(builder, wrapperClass, isQueryTargetEntityResult, mainEntityClass);
         if (field == null) {
             throw new RuntimeException("join field not found");
