@@ -11,6 +11,8 @@ import com.baomidou.mybatisplus.core.toolkit.ArrayUtils;
 import com.baomidou.mybatisplus.core.toolkit.Assert;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.hgf.helper.mybatisplus.OriginSqlBo;
+import com.hgf.helper.mybatisplus.join.JoinQueryBase;
+import com.hgf.helper.mybatisplus.join.JoinQueryBuilder;
 import com.hgf.helper.mybatisplus.utils.CollectionUtil;
 import org.springframework.util.StringUtils;
 

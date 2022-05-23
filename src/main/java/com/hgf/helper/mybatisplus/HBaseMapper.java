@@ -1,8 +1,10 @@
 package com.hgf.helper.mybatisplus;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Constants;
+import com.hgf.helper.mybatisplus.helper.MyLambdaQueryWrapper;
 import com.hgf.helper.mybatisplus.join.JoinLambdaQueryWrapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -22,19 +24,19 @@ public interface HBaseMapper<T> extends BaseMapper<T> {
     /**
      * 多表联查 单个记录
      */
-    T selectJoinOne(@Param(Constants.WRAPPER) JoinLambdaQueryWrapper<T> joinLambdaQueryWrapper);
+    T selectJoinOne(@Param(Constants.WRAPPER) MyLambdaQueryWrapper<T> queryWrapper);
 
     /**
      * 多表联查多个记录
      */
-    List<T> selectJoinList(@Param(Constants.WRAPPER) JoinLambdaQueryWrapper<T> queryWrapper);
+    List<T> selectJoinList(@Param(Constants.WRAPPER) MyLambdaQueryWrapper<T> queryWrapper);
 
     /**
      * 根据 Wrapper 条件，多表联查查询全部记录
      *
      * @param queryWrapper 实体对象封装操作类（可以为 null）
      */
-    List<Map<String, Object>> selectJoinMaps(@Param(Constants.WRAPPER) JoinLambdaQueryWrapper<T> queryWrapper);
+    List<Map<String, Object>> selectJoinMaps(@Param(Constants.WRAPPER) MyLambdaQueryWrapper<T> queryWrapper);
 
     /**
      * 根据 Wrapper 条件，多表联查查询全部记录
@@ -42,7 +44,7 @@ public interface HBaseMapper<T> extends BaseMapper<T> {
      * Params:
      * queryWrapper – 实体对象封装操作类（可以为 null）
      */
-    List<Object> selectJoinObjects(@Param(Constants.WRAPPER) JoinLambdaQueryWrapper<T> queryWrapper);
+    List<Object> selectJoinObjects(@Param(Constants.WRAPPER) MyLambdaQueryWrapper<T> queryWrapper);
 
 
     /**
@@ -51,6 +53,6 @@ public interface HBaseMapper<T> extends BaseMapper<T> {
      * @param page         分页查询条件（可以为 RowBounds.DEFAULT）
      * @param queryWrapper 实体对象封装操作类（可以为 null）
      */
-    <E extends IPage<T>> E selectJoinPage(E page, @Param(Constants.WRAPPER) JoinLambdaQueryWrapper<T> queryWrapper);
+    <E extends IPage<T>> E selectJoinPage(E page, @Param(Constants.WRAPPER) MyLambdaQueryWrapper<T> queryWrapper);
 
 }
