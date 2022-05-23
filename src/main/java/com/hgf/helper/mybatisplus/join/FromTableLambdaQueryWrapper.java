@@ -42,10 +42,6 @@ public class FromTableLambdaQueryWrapper<T> extends MyLambdaQueryWrapper<T> {
     public static final String PARAM_MAP_FIELD = "paramValMap";
 
     /**
-     * 连接类型
-     */
-    private String joinFlag;
-    /**
      * 表别名
      */
     private String tableName;
@@ -166,11 +162,12 @@ public class FromTableLambdaQueryWrapper<T> extends MyLambdaQueryWrapper<T> {
      */
     public <K, T, E> FromTableLambdaQueryWrapper<T> joinTable(JoinTableLambdaQueryWrapper<K> queryWrapper, JoinQueryBase<K, T, E> builder) {
         // 解析关联的列信息
-        JoinColumnInfo joinColumnInfo = JoinColumnParseHelper.wrapperJoinColumnInfo(
-                builder,
-                isQueryTargetEntityResult ? queryType : super.getEntityClass(),
-                isQueryTargetEntityResult,
-                super.getEntityClass());
+        JoinColumnInfo joinColumnInfo =
+                JoinColumnParseHelper.wrapperJoinColumnInfo(
+                    builder,
+                    isQueryTargetEntityResult ? queryType : super.getEntityClass(),
+                    isQueryTargetEntityResult,
+                    super.getEntityClass());
         // 表别名或列前缀
         String joinTableColumnPrefix = JoinTableHelper.getJoinTableColumnPrefix(joinColumnInfo.getQueryTypeJoinField());
         // 已经存在此连接关系
@@ -330,6 +327,7 @@ public class FromTableLambdaQueryWrapper<T> extends MyLambdaQueryWrapper<T> {
      */
     @Override
     public String getSqlSegment() {
+        Set<JoinTableLambdaQueryWrapper<?>> wrappers = this.wrapperMap.keySet();
         String sql = this.wrapperMap.keySet().stream()
                 .map(t -> formatSqlSegment(t.getExpression().getSqlSegment(), t.getTableAlias()))
                 .collect(Collectors.joining(" ")).trim();

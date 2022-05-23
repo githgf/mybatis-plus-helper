@@ -1,6 +1,5 @@
 package com.hgf.helper.mybatisplus.join;
 
-import com.baomidou.mybatisplus.core.conditions.segments.MergeSegments;
 import com.baomidou.mybatisplus.core.metadata.TableInfo;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import com.baomidou.mybatisplus.core.toolkit.ArrayUtils;
@@ -15,7 +14,6 @@ import com.hgf.helper.mybatisplus.helper.MyLambdaQueryWrapper;
 import com.hgf.helper.mybatisplus.utils.CollectionUtil;
 import lombok.Getter;
 import lombok.Setter;
-import lombok.experimental.Accessors;
 import org.apache.ibatis.reflection.property.PropertyNamer;
 import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
@@ -141,17 +139,17 @@ public class JoinTableLambdaQueryWrapper<K> extends MyLambdaQueryWrapper<K> {
             return selectSqlCache;
         }
         List<String> parts = super.getSelectBuilder().getParts();
-        String joinSql;
+        String selectSql;
         if (CollectionUtil.isEmpty(parts)) {
-            joinSql = getFullColumnSqlSelect();
+            selectSql = getFullColumnSqlSelect();
         } else {
-            joinSql = parts.stream()
+            selectSql = parts.stream()
                     .map(t -> builderSelectSegment(t))
                     .collect(Collectors.joining(COMMA));
         }
-        selectSqlCache = joinSql;
+        selectSqlCache = selectSql;
         isCachedSelectSql = true;
-        return joinSql;
+        return selectSql;
     }
 
     /**
