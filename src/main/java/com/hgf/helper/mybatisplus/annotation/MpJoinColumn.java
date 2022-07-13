@@ -19,4 +19,9 @@ public @interface MpJoinColumn {
      */
     String refFieldName();
 
+    /**
+     * 附表别称
+     */
+    String joinTableAlias() default "";
+
 }

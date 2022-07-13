@@ -33,4 +33,9 @@ public class JoinColumnInfo {
      */
     Field queryTypeJoinField;
 
+    /**
+     * 附表别称
+     */
+    String joinTableAlias;
+
 }

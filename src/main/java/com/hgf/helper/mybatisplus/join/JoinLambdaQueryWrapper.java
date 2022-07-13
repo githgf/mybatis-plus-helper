@@ -125,7 +125,7 @@ public class JoinLambdaQueryWrapper<T> extends MyLambdaQueryWrapper<T> {
         JoinColumnInfo joinColumnInfo = JoinColumnParseHelper.wrapperJoinColumnInfo(builder, isQueryTargetEntityResult ? queryType : super.getEntityClass(), isQueryTargetEntityResult, super.getEntityClass());
 
 
-        String joinTableColumnPrefix = JoinTableHelper.getJoinTableColumnPrefix(joinColumnInfo.getQueryTypeJoinField());
+        String joinTableColumnPrefix = joinColumnInfo.getJoinTableAlias();
         // 已经存在此连接关系
         if (existsWrapper(joinTableColumnPrefix)) {
             return null;
@@ -297,12 +297,16 @@ public class JoinLambdaQueryWrapper<T> extends MyLambdaQueryWrapper<T> {
 
         String sql = this.wrapperMap.keySet().stream().map(t -> formatSqlSegment(t.getExpression().getSqlSegment(),t.getTableAlias())).collect(Collectors.joining(" ")).trim();
 
-        if (!StringUtils.isEmpty(sql)) {
+        /*if (!StringUtils.isEmpty(sql)) {
             sql = String.format(" %s %s ", SqlKeyword.AND.getSqlSegment(), sql);
-        }
+        }*/
         String otherSegment = getOtherSegment();
 
-        return String.format("%s \n %s %s", expression.getSqlSegment() + otherSegment, sql, lastSql.getStringValue());
+        String sqlSegment = expression.getSqlSegment();
+
+        sqlSegment += (StringUtils.isEmpty(sql) ? sql : SqlKeyword.AND.getSqlSegment() + " " + sql);
+
+        return String.format("%s \n %s %s", sqlSegment, otherSegment, lastSql.getStringValue());
     }
 
     protected String formatSqlSegment(String origin,String tableAlias) {
@@ -324,7 +328,7 @@ public class JoinLambdaQueryWrapper<T> extends MyLambdaQueryWrapper<T> {
             Set<String> groupByColumns = joinLambdaQueryWrapper.getGroupByColumns();
 
             if (CollectionUtil.isNotEmpty(groupByColumns)) {
-                otherSqlMergeSegments.add(doIt(true, SqlKeyword.GROUP_BY, () -> String.join(COMMA, groupByColumns)));
+                otherSqlMergeSegments.add(SqlKeyword.GROUP_BY, () -> String.join(COMMA, groupByColumns));
             }
 
             Set<OrderByCache> orderByColumns = joinLambdaQueryWrapper.getOrderByColumns();
@@ -333,8 +337,7 @@ public class JoinLambdaQueryWrapper<T> extends MyLambdaQueryWrapper<T> {
 
                 orderByColumns.forEach(t -> {
                     SqlKeyword mode = t.isDesc ? DESC : ASC;
-                    otherSqlMergeSegments.add(
-                            doIt(true, SqlKeyword.ORDER_BY, () -> t.column, mode)
+                    otherSqlMergeSegments.add( SqlKeyword.ORDER_BY, () -> t.column, mode
                     );
                 });
 
@@ -342,16 +345,14 @@ public class JoinLambdaQueryWrapper<T> extends MyLambdaQueryWrapper<T> {
         }
 
         if (CollectionUtil.isNotEmpty(this.groupByColumns)) {
-            otherSqlMergeSegments.add(doIt(true, SqlKeyword.GROUP_BY, () -> String.join(COMMA, this.groupByColumns)));
+            otherSqlMergeSegments.add( SqlKeyword.GROUP_BY, () -> String.join(COMMA, this.groupByColumns));
         }
 
         if (CollectionUtil.isNotEmpty(orderByColumns)) {
 
             orderByColumns.forEach(t -> {
                 SqlKeyword mode = t.isDesc ? DESC : ASC;
-                otherSqlMergeSegments.add(
-                        doIt(true, SqlKeyword.ORDER_BY, () -> t.column, mode)
-                );
+                otherSqlMergeSegments.add(SqlKeyword.ORDER_BY, () -> t.column, mode);
             });
 
         }
@@ -437,6 +438,20 @@ public class JoinLambdaQueryWrapper<T> extends MyLambdaQueryWrapper<T> {
     }
 
     @Override
+    public JoinLambdaQueryWrapper<T> groupBy(String column) {
+        if (this.groupByColumns == null) {
+            this.groupByColumns = new HashSet<>();
+        }
+
+
+        this.groupByColumns.add(
+                column
+        );
+
+        return typedThis;
+    }
+
+    @Override
     protected JoinLambdaQueryWrapper<T> instance() {
         return new JoinLambdaQueryWrapper<>(getEntityClass(), getQueryType(), paramNameSeq, paramNameValuePairs);
     }
@@ -497,6 +512,21 @@ public class JoinLambdaQueryWrapper<T> extends MyLambdaQueryWrapper<T> {
                 .map(t -> new OrderByCache(!isAsc, columnToString(t)))
                 .collect(Collectors.toSet());
         this.orderByColumns.addAll(collect);
+
+        return typedThis;
+    }
+
+    @Override
+    public JoinLambdaQueryWrapper<T> orderBy(boolean isAsc, String column) {
+        if (StringUtils.isEmpty(column)) {
+            return typedThis;
+        }
+        if (this.orderByColumns == null) {
+            this.orderByColumns = new HashSet<>();
+        }
+
+
+        this.orderByColumns.add(new OrderByCache(!isAsc, column));
 
         return typedThis;
     }

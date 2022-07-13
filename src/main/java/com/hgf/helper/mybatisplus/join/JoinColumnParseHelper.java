@@ -70,6 +70,8 @@ public class JoinColumnParseHelper {
         joinColumnInfo.setJoinEntityClass(joinEntityClass);
         joinColumnInfo.setMainEntityClass(mainEntityClass);
         joinColumnInfo.setQueryTypeJoinField(queryJoinWrapperField);
+        joinColumnInfo.setJoinTableAlias(joinColumn.joinTableAlias());
+
 
         return joinColumnInfo;
 
@@ -153,14 +155,11 @@ public class JoinColumnParseHelper {
         return parse(joinColumn, field, mainEntityClass);
     }
 
+
     /**
      * 封装 JoinColumnInfo
      */
     public static JoinColumnInfo parseByQueryJoinWrapperField(JoinQueryBuilder<?, ?, ?> builder, Class<?> wrapperClass, boolean isQueryTargetEntityResult, Class<?> mainEntityClass) {
-        Field field = getQueryJoinWrapperField(builder, wrapperClass, isQueryTargetEntityResult, mainEntityClass);
-        if (field == null) {
-            throw new RuntimeException("join field not found");
-        }
 
         JoinColumnInfo joinColumnInfo = new JoinColumnInfo();
         SerializedLambda mainLambda = LambdaUtils.resolve(builder.getMainJoinField());
@@ -178,7 +177,17 @@ public class JoinColumnParseHelper {
 
         String joinFieldName = PropertyNamer.methodToProperty(joinLambda.getImplMethodName());
 
-        Class<?> joinEntityClass = ReflectUtil.getFieldRealType(field);
+//        Class<?> joinEntityClass = ReflectUtil.getFieldRealType(field);
+
+        SFunction<?, ?> joinFieldFunc = builder.getJoinField();
+        if (joinFieldFunc == null || builder.getMainJoinField() == null) {
+            throw new RuntimeException("param error");
+        }
+
+        SerializedLambda resolve = LambdaUtils.resolve(joinFieldFunc);
+        // 附表实体类class
+        Class<?> joinEntityClass = resolve.getInstantiatedType();
+
 
 
         columnCache = getColumnByFieldName(joinFieldName, joinEntityClass);
@@ -188,7 +197,23 @@ public class JoinColumnParseHelper {
         joinColumnInfo.setJoinTableColumn(columnCache.getColumn());
         joinColumnInfo.setJoinEntityClass(joinEntityClass);
         joinColumnInfo.setMainEntityClass(mainEntityClass);
-        joinColumnInfo.setQueryTypeJoinField(field);
+
+
+        // 设置表别名
+        if (!StringUtils.isEmpty(builder.getJoinTableAlias())) {
+            joinColumnInfo.setJoinTableAlias(builder.getJoinTableAlias());
+        }else {
+            Field field = getQueryJoinWrapperField(builder, wrapperClass, isQueryTargetEntityResult, mainEntityClass);
+            if (field != null) {
+                String prefix = JoinTableHelper.getJoinTableColumnPrefix(field);
+                joinColumnInfo.setJoinTableAlias(prefix);
+            }
+        }
+
+        if (StringUtils.isEmpty(joinColumnInfo.getJoinTableAlias())) {
+            joinColumnInfo.setJoinTableAlias(TableInfoHelper.getTableInfo(joinEntityClass).getTableName());
+        }
+
 
 
         return joinColumnInfo;

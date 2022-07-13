@@ -79,7 +79,7 @@ public class MyLambdaQueryWrapper<T> extends AbstractLambdaWrapper<T, MyLambdaQu
     @Override
     public MyLambdaQueryWrapper<T> select(SFunction<T, ?>... columns) {
         if (ArrayUtils.isNotEmpty(columns)) {
-            Stream.of(columns).forEach(t -> this.sqlSelect.getParts().add(columnToString(t,false)));
+            Stream.of(columns).forEach(t -> this.sqlSelect.getParts().add(columnToString(t,true)));
         }
         return typedThis;
     }
@@ -254,6 +254,11 @@ public class MyLambdaQueryWrapper<T> extends AbstractLambdaWrapper<T, MyLambdaQu
 
         return typedThis;
     }
+
+    public MyLambdaQueryWrapper<T> groupBy(String column) {
+        return doIt(true, GROUP_BY, () -> column);
+    }
+
 
     @Override
     public String columnToString(SFunction<T, ?> column) {

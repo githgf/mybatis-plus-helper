@@ -13,6 +13,9 @@ public class JoinTableHelper {
      * 获取关联表前缀
      */
     public static String getJoinTableColumnPrefix(Field field) {
+        if (field == null) {
+            return null;
+        }
         Association association = field.getAnnotation(Association.class);
         if (association != null && StringUtils.isNotBlank(association.aliasPrefix())) {
             return association.aliasPrefix();

@@ -41,5 +41,10 @@ public class JoinQueryBuilder<K,T,E> {
      */
     SFunction<E, K> joinColumnAnnFiled;
 
+    /**
+     * 连接表别名
+     */
+    String joinTableAlias;
+
 
 }
