@@ -1,5 +1,6 @@
 package com.hgf.helper.mybatisplus;
 
+import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.core.conditions.AbstractWrapper;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -12,6 +13,7 @@ import com.baomidou.mybatisplus.core.metadata.TableFieldInfo;
 import com.baomidou.mybatisplus.core.metadata.TableInfo;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import com.baomidou.mybatisplus.core.toolkit.Constants;
+import com.baomidou.mybatisplus.core.toolkit.GlobalConfigUtils;
 import com.baomidou.mybatisplus.core.toolkit.ReflectionKit;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
@@ -25,7 +27,8 @@ import com.hgf.helper.mybatisplus.utils.CollectionUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.ibatis.annotations.Param;
-import org.springframework.util.ReflectionUtils;
+import org.apache.ibatis.reflection.MetaObject;
+import org.apache.ibatis.session.Configuration;
 import org.springframework.util.StringUtils;
 
 import java.io.Serializable;
@@ -121,7 +124,7 @@ public class BaseServiceImpl<M extends BaseMapper<T>, T> extends ServiceImpl<M,T
      */
     protected <E extends IPage<T>> E selectPage(E page, @Param(Constants.WRAPPER) Wrapper<T> queryWrapper) {
 
-        if (queryWrapper instanceof AbstractWrapper) {
+        /*if (queryWrapper instanceof AbstractWrapper) {
             boolean hasOrder = !StringUtils.isEmpty(queryWrapper.getSqlSegment()) && queryWrapper.getSqlSegment().toUpperCase().contains("ORDER");
             if (!hasOrder) {
                 AbstractWrapper wrapper = (AbstractWrapper) queryWrapper;
@@ -130,7 +133,7 @@ public class BaseServiceImpl<M extends BaseMapper<T>, T> extends ServiceImpl<M,T
                     lambdaQueryWrapper.orderBy(true, false, "create_time");
                 }
             }
-        }
+        }*/
         return baseMapper.selectPage(page, queryWrapper);
     }
 
@@ -142,17 +145,14 @@ public class BaseServiceImpl<M extends BaseMapper<T>, T> extends ServiceImpl<M,T
             return false;
         }
 
-        if (!updateWrapper.getSqlSet().contains("update_time")) {
-            if (updateWrapper instanceof LambdaUpdateWrapper) {
-                LambdaUpdateWrapper<T> lambdaUpdateWrapper = (LambdaUpdateWrapper<T>) updateWrapper;
-//                lambdaUpdateWrapper.set(T::getUpdateTime, new Date());
-            }else if (updateWrapper instanceof MyLambdaUpdateWrapper) {
-                MyLambdaUpdateWrapper<T> lambdaUpdateWrapper = (MyLambdaUpdateWrapper<T>) updateWrapper;
-//                lambdaUpdateWrapper.set(T::getUpdateTime, new Date());
-            }
-
+        // 主动填充
+        try {
+            T t = entityClass.newInstance();
+            return super.update(t, updateWrapper);
+        } catch (Exception e) {
+            return super.update(null, updateWrapper);
         }
-        return super.update(null, updateWrapper);
+
     }
 
     @Override
@@ -350,5 +350,26 @@ public class BaseServiceImpl<M extends BaseMapper<T>, T> extends ServiceImpl<M,T
         return OriginSqlBo.builder();
     }
 
+    public String getUpdateFillSql(){
+        TableInfo tableInfo = TableInfoHelper.getTableInfo(entityClass);
+        List<TableFieldInfo> fieldList = tableInfo.getFieldList();
+        List<String> sqlList = new ArrayList<>();
+        Configuration configuration = GlobalConfigUtils.currentSessionFactory(entityClass).getConfiguration();
 
+        T t = null;
+        try {
+            t = entityClass.newInstance();
+        } catch (Exception e) {
+            return "";
+        }
+        MetaObject metaObject = configuration.newMetaObject(t);
+        GlobalConfigUtils.getMetaObjectHandler(configuration).ifPresent(metaObjectHandler -> {
+            if (metaObjectHandler.openUpdateFill() && tableInfo.isWithUpdateFill()) {
+                metaObjectHandler.updateFill(metaObject);
+            }
+        });
+
+        return "";
+
+    }
 }
