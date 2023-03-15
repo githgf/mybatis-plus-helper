@@ -153,8 +153,10 @@ public class ResultMapperBuilder {
         }*/
 
         String property = declaredField.getName();
+        Class<?> propertyType = reflector.getGetterType(property);
 
-        ResultMapping.Builder mappingBuilder = getTableFieldResultMappingBuilder(configuration, property, declaredField.getType(), null, null, null);
+
+        ResultMapping.Builder mappingBuilder = getTableFieldResultMappingBuilder(configuration, property, propertyType, null, null, null);
         mappingBuilder.columnPrefix(columnPrefix);
         mappingBuilder.nestedResultMapId(newResultMapId);
         return mappingBuilder.build();

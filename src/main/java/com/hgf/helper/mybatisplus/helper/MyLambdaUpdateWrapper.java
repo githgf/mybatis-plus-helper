@@ -8,7 +8,6 @@ import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
 import com.baomidou.mybatisplus.core.toolkit.StringPool;
 import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
-import com.hgf.helper.mybatisplus.OriginSqlBo;
 import com.hgf.helper.mybatisplus.utils.CollectionUtil;
 
 import java.util.ArrayList;
@@ -66,7 +65,7 @@ public class MyLambdaUpdateWrapper<T> extends AbstractLambdaWrapper<T, MyLambdaU
     public MyLambdaUpdateWrapper<T> incrField(SFunction<T, ?> columns, Object value) {
         String columnsToString = super.columnToString(columns);
 
-        String format = String.format("%s =  %s + %s", columnsToString,columnsToString, formatSql("{0}", value));
+        String format = String.format("%s =  %s + %s", columnsToString, columnsToString, formatSqlMaybeWithParam("{0}", null, value));
 
         setSql(format);
 
@@ -85,7 +84,7 @@ public class MyLambdaUpdateWrapper<T> extends AbstractLambdaWrapper<T, MyLambdaU
     public MyLambdaUpdateWrapper<T> descField(SFunction<T, ?> columns, Object value) {
         String columnsToString = super.columnToString(columns);
 
-        String format = String.format("%s =  %s - %s", columnsToString,columnsToString, formatSql("{0}", value));
+        String format = String.format("%s =  %s - %s", columnsToString, columnsToString, formatSqlMaybeWithParam("{0}", null, value));
 
         setSql(format);
 
@@ -103,11 +102,11 @@ public class MyLambdaUpdateWrapper<T> extends AbstractLambdaWrapper<T, MyLambdaU
         for (int i = 0; i < sqlBos.length; i++) {
             OriginSqlBo<T> sqlBo = sqlBos[i];
             Object o = null;
-            if (sqlBo.isColumn() && sqlBo.getSFunction() != null) {
+            if (sqlBo.isColumn && sqlBo.getSFunction() != null) {
                 o = columnToString(sqlBo.getSFunction());
-            } else if (!sqlBo.isColumn() && sqlBo.getObject() != null) {
+            } else if (!sqlBo.isColumn && sqlBo.getObject() != null) {
 
-                o = sqlBo.isPreParam() ? formatSql("{0}", sqlBo.getObject()) : sqlBo.getObject();
+                o = sqlBo.isPreParam ? formatSqlMaybeWithParam("{0}", null, sqlBo.getObject()) : sqlBo.getObject();
             }
 
             if (o != null) {
@@ -117,7 +116,7 @@ public class MyLambdaUpdateWrapper<T> extends AbstractLambdaWrapper<T, MyLambdaU
 
         if (!CollectionUtil.isEmpty(objects)) {
             String format = String.format(sqlFormat, objects);
-            doIt(true, () -> format, SqlKeyword.AND);
+            maybeDo(true, () -> appendSqlSegments(() -> format, SqlKeyword.AND));
         }
 
         return this;
@@ -131,7 +130,7 @@ public class MyLambdaUpdateWrapper<T> extends AbstractLambdaWrapper<T, MyLambdaU
 
     /**
      * 根据传入map case update 最终实现如下效果
-     * <p>
+     *
      *      SET `columns` = (
      *     CASE `caseColumns` WHEN caseMap.keys[0] THEN caseMap.values[0]
      *     WHEN caseMap.keys[1] THEN caseMap.values[1]
@@ -146,7 +145,7 @@ public class MyLambdaUpdateWrapper<T> extends AbstractLambdaWrapper<T, MyLambdaU
         StringBuilder stringBuilder = new StringBuilder();
         int paramIndex = 0;
         for (Object o : caseMap.keySet()) {
-            stringBuilder.append(String.format(" WHEN {%d} THEN {%d}", paramIndex++, paramIndex++)).append("\n");
+            stringBuilder.append(String.format("WHEN {%d} THEN {%d}", paramIndex++, paramIndex++)).append("\n");
             params.add(o);
             params.add(caseMap.get(o));
         }
@@ -154,12 +153,10 @@ public class MyLambdaUpdateWrapper<T> extends AbstractLambdaWrapper<T, MyLambdaU
         String caseSqlFormat = String.format("(case %s %s end)", super.columnToString(caseColumns), stringBuilder.toString());
 
 
-        String format = String.format("%s =  %s", columnsToString, formatSql(caseSqlFormat, params.toArray(new Object[0])));
+        String format = String.format("%s =  %s", columnsToString, formatSqlMaybeWithParam(caseSqlFormat, null, params.toArray(new Object[0])));
 
 
         setSql(format);
-
-        in(caseColumns, caseMap.keySet());
 
         return this;
     }
@@ -171,7 +168,7 @@ public class MyLambdaUpdateWrapper<T> extends AbstractLambdaWrapper<T, MyLambdaU
         StringBuilder stringBuilder = new StringBuilder();
         int paramIndex = 0;
         for (Object o : caseMap.keySet()) {
-            stringBuilder.append(String.format(" WHEN {%d} THEN {%d}", paramIndex++, paramIndex++)).append("\n");
+            stringBuilder.append(String.format("WHEN {%d} THEN {%d}", paramIndex++, paramIndex++)).append("\n");
             params.add(o);
             params.add(caseMap.get(o));
         }
@@ -179,7 +176,7 @@ public class MyLambdaUpdateWrapper<T> extends AbstractLambdaWrapper<T, MyLambdaU
         String caseSqlFormat = String.format("(case %s %s end)", super.columnToString(caseColumns), stringBuilder.toString());
 
 
-        String format = String.format("%s = %s + %s", columnsToString, columnsToString, formatSql(caseSqlFormat, params.toArray(new Object[0])));
+        String format = String.format("%s = %s + %s", columnsToString, columnsToString, formatSqlMaybeWithParam(caseSqlFormat,null, params.toArray(new Object[0])));
 
 
         setSql(format);
@@ -187,15 +184,8 @@ public class MyLambdaUpdateWrapper<T> extends AbstractLambdaWrapper<T, MyLambdaU
         return this;
     }
 
-    public MyLambdaUpdateWrapper<T> set(boolean condition, SFunction<T, ?> column, Object val) {
-        if (condition) {
-            sqlSet.add(String.format("%s=%s", columnToString(column), formatSql("{0}", val)));
-        }
-        return typedThis;
-    }
-
-    public MyLambdaUpdateWrapper<T> set( SFunction<T, ?> column, Object val) {
-        sqlSet.add(String.format("%s=%s", columnToString(column), formatSql("{0}", val)));
+    public MyLambdaUpdateWrapper<T> set(SFunction<T, ?> column, Object val) {
+        sqlSet.add(String.format("%s=%s", columnToString(column), formatSqlMaybeWithParam("{0}", null, val)));
         return typedThis;
     }
 

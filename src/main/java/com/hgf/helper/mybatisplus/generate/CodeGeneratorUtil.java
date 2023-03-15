@@ -3,7 +3,6 @@ package com.hgf.helper.mybatisplus.generate;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.core.toolkit.StringPool;
 import com.baomidou.mybatisplus.generator.AutoGenerator;
-import com.baomidou.mybatisplus.generator.InjectionConfig;
 import com.baomidou.mybatisplus.generator.config.*;
 import com.baomidou.mybatisplus.generator.config.po.TableInfo;
 import com.baomidou.mybatisplus.generator.config.rules.NamingStrategy;
@@ -21,7 +20,7 @@ import java.util.List;
 public class CodeGeneratorUtil {
 
 
-    public static void generate(DataSourceConfig dsc,PackageConfig pc,String dbTables,String tablePrefix) {
+    /*public static void generate(DataSourceConfig dsc,PackageConfig pc,String dbTables,String tablePrefix) {
         // 代码生成器
         AutoGenerator mpg = new AutoGenerator();
 
@@ -36,19 +35,19 @@ public class CodeGeneratorUtil {
         mpg.setGlobalConfig(gc);
 
         // 数据源配置
-        /*DataSourceConfig dsc = new DataSourceConfig();
+        *//*DataSourceConfig dsc = new DataSourceConfig();
         dsc.setUrl("jdbc:mysql://inner.com:3307/we_work_admin?useUnicode=true&useSSL=false&characterEncoding=utf8");
         // dsc.setSchemaName("public");
         dsc.setDriverName("com.mysql.jdbc.Driver");
         dsc.setUsername("root");
-        dsc.setPassword("123456");*/
+        dsc.setPassword("123456");*//*
 
         mpg.setDataSource(dsc);
 
         // 包配置
-        /*PackageConfig pc = new PackageConfig();
+        *//*PackageConfig pc = new PackageConfig();
         pc.setModuleName("db.mysql");
-        pc.setParent("com.eco.robot.wework");*/
+        pc.setParent("com.eco.robot.wework");*//*
         mpg.setPackageInfo(pc);
 
         // 自定义配置
@@ -75,7 +74,7 @@ public class CodeGeneratorUtil {
                         + "/" + tableInfo.getEntityName() + "Mapper" + StringPool.DOT_XML;
             }
         });
-        /*
+        *//*
         cfg.setFileCreate(new IFileCreate() {
             @Override
             public boolean isCreate(ConfigBuilder configBuilder, FileType fileType, String filePath) {
@@ -89,7 +88,7 @@ public class CodeGeneratorUtil {
                 return true;
             }
         });
-        */
+        *//*
         cfg.setFileOutConfigList(focList);
         mpg.setCfg(cfg);
 
@@ -126,6 +125,6 @@ public class CodeGeneratorUtil {
         mpg.setStrategy(strategy);
         mpg.setTemplateEngine(new FreemarkerTemplateEngine());
         mpg.execute();
-    }
+    }*/
 
 }

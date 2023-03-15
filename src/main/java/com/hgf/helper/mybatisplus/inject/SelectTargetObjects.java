@@ -4,33 +4,35 @@ import com.baomidou.mybatisplus.core.enums.SqlMethod;
 import com.baomidou.mybatisplus.core.metadata.TableInfo;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import com.baomidou.mybatisplus.core.toolkit.sql.SqlScriptUtils;
-import com.hgf.helper.mybatisplus.helper.ResultMapperBuilder;
 import com.hgf.helper.mybatisplus.annotation.SelectTargetResult;
+import com.hgf.helper.mybatisplus.helper.ResultMapperBuilder;
 import com.hgf.helper.mybatisplus.join.JoinHelperStartHook;
 import com.hgf.helper.mybatisplus.join.JoinLambdaQueryWrapper;
-import com.hgf.helper.mybatisplus.utils.ReflectUtil;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.builder.MapperBuilderAssistant;
 import org.apache.ibatis.executor.keygen.NoKeyGenerator;
-import org.apache.ibatis.mapping.*;
+import org.apache.ibatis.mapping.MappedStatement;
+import org.apache.ibatis.mapping.ResultMap;
+import org.apache.ibatis.mapping.SqlCommandType;
+import org.apache.ibatis.mapping.SqlSource;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 
 /**
- * 多表联查返回指定对象（非数据表映射实体类） mapper 方法注入
+ * 自动构建非实体类结果的mapper 方法
  *
  * mapper 中需要加上 {@link SelectTargetResult} 注解
  *
  * 如下所示
- * <p>
+ *
  *     @SelectTargetResult
  *     ResultVo getResultVo(@Param(Constants.WRAPPER) Wrappers<T> wrappers);
  * </p>
@@ -114,14 +116,13 @@ public class SelectTargetObjects extends AbstractJoinSelectMethod {
         SelectTargetResult selectTargetResult = method.getAnnotation(SelectTargetResult.class);
         Class<?> value = selectTargetResult.value();
         if (value.equals(Class.class)) {
-            resultClass = ReflectUtil.getMethodRealReturnType(method);
+            resultClass = method.getReturnType();
         }else {
             resultClass = value;
         }
 
-
-
         ResultMap resultMap = resultMapperBuilder.wrapperResultMap(resultClass, mainEntityClass);
+
         boolean useJoin = false;
         Parameter[] parameters = method.getParameters();
         for (Parameter parameter : parameters) {
@@ -130,7 +131,7 @@ public class SelectTargetObjects extends AbstractJoinSelectMethod {
                 continue;
             }
 
-            useJoin = parameter.getType().isAssignableFrom(JoinLambdaQueryWrapper.class);
+            useJoin = parameter.getType().getName().equals(JoinLambdaQueryWrapper.class.getName());
             if (useJoin) {
                 break;
             }
@@ -149,7 +150,7 @@ public class SelectTargetObjects extends AbstractJoinSelectMethod {
                     sqlComment()
             );
         }else {
-
+            
             sql = String.format(SqlMethod.SELECT_LIST.getSql(),
                     sqlFirst(),
                     sqlSelectColumns(),

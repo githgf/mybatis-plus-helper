@@ -6,9 +6,6 @@ import org.apache.ibatis.mapping.SqlSource;
 
 import java.util.Map;
 
-/**
- * 多表联查返回list<map> mapper 方法注入
- */
 public class SelectJoinMaps extends AbstractJoinSelectMethod {
     @Override
     public MappedStatement injectMappedStatement(Class<?> mapperClass, Class<?> modelClass, TableInfo tableInfo) {

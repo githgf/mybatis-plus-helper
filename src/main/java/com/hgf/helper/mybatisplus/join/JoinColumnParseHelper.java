@@ -5,8 +5,10 @@ import com.baomidou.mybatisplus.core.metadata.TableInfo;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import com.baomidou.mybatisplus.core.toolkit.LambdaUtils;
 import com.baomidou.mybatisplus.core.toolkit.support.ColumnCache;
+import com.baomidou.mybatisplus.core.toolkit.support.LambdaMeta;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.baomidou.mybatisplus.core.toolkit.support.SerializedLambda;
+import com.hgf.helper.mybatisplus.annotation.Association;
 import com.hgf.helper.mybatisplus.annotation.MpJoinColumn;
 import com.hgf.helper.mybatisplus.utils.CollectionUtil;
 import com.hgf.helper.mybatisplus.utils.ReflectUtil;
@@ -66,12 +68,25 @@ public class JoinColumnParseHelper {
             throw new RuntimeException(String.format("%s not found column  in %s", refFieldName, joinEntityClass.getName()));
         }
 
+        String joinTableAlias = joinColumn.joinTableAlias();
+        if (StringUtils.isEmpty(joinTableAlias)) {
+            Association annotation = queryJoinWrapperField.getAnnotation(Association.class);
+            if (annotation != null) {
+                joinTableAlias = annotation.aliasPrefix();
+            }
+
+        }
+
+
+        if (StringUtils.isEmpty(joinTableAlias)) {
+            joinTableAlias = queryJoinWrapperField.getName() + "_";
+        }
+
         joinColumnInfo.setJoinTableColumn(refColumnCache.getColumn());
         joinColumnInfo.setJoinEntityClass(joinEntityClass);
         joinColumnInfo.setMainEntityClass(mainEntityClass);
         joinColumnInfo.setQueryTypeJoinField(queryJoinWrapperField);
-        joinColumnInfo.setJoinTableAlias(joinColumn.joinTableAlias());
-
+        joinColumnInfo.setJoinTableAlias(joinTableAlias);
 
         return joinColumnInfo;
 
@@ -96,9 +111,9 @@ public class JoinColumnParseHelper {
         }
         SFunction<?, ?> associationAnnField = builder.getAssociationAnnField();
 
-        SerializedLambda resolve = LambdaUtils.resolve(joinFieldFunc);
+        LambdaMeta resolve = LambdaUtils.extract(joinFieldFunc);
         // 附表实体类class
-        Class<?> joinEntity = resolve.getInstantiatedType();
+        Class<?> joinEntity = resolve.getInstantiatedClass();
 
 
         // 主表实体类
@@ -107,7 +122,7 @@ public class JoinColumnParseHelper {
         Field field = null;
 
         // 自动从 lambdaQueryWrapper 推测链接附表的实体属性
-        String joinWrapperFieldName = Optional.ofNullable(associationAnnField).map(t -> PropertyNamer.methodToProperty(LambdaUtils.resolve(associationAnnField).getImplMethodName())).orElse(null);;
+        String joinWrapperFieldName = Optional.ofNullable(associationAnnField).map(t -> PropertyNamer.methodToProperty(LambdaUtils.extract(associationAnnField).getImplMethodName())).orElse(null);;
 
         if (!StringUtils.isEmpty(joinWrapperFieldName)) {
             try {
@@ -140,7 +155,7 @@ public class JoinColumnParseHelper {
 
     }
 
-    public static JoinColumnInfo parseByJoinColumnAnnFieldFunc(SFunction<?, ?> function, Class<?> mainEntityClass) {
+    public static JoinColumnInfo parseByJoinColumnAnnFieldFunc(SFunction<?, ?> function,Class<?> mainEntityClass) {
 
         Field field = getFieldByJoinColumnAnnFieldFunc(function);
         if (field == null) {
@@ -155,14 +170,13 @@ public class JoinColumnParseHelper {
         return parse(joinColumn, field, mainEntityClass);
     }
 
-
     /**
      * 封装 JoinColumnInfo
      */
     public static JoinColumnInfo parseByQueryJoinWrapperField(JoinQueryBuilder<?, ?, ?> builder, Class<?> wrapperClass, boolean isQueryTargetEntityResult, Class<?> mainEntityClass) {
 
         JoinColumnInfo joinColumnInfo = new JoinColumnInfo();
-        SerializedLambda mainLambda = LambdaUtils.resolve(builder.getMainJoinField());
+        LambdaMeta mainLambda = LambdaUtils.extract(builder.getMainJoinField());
 
         String mainFieldName = PropertyNamer.methodToProperty(mainLambda.getImplMethodName());
 
@@ -173,7 +187,7 @@ public class JoinColumnParseHelper {
 
         joinColumnInfo.setMainTableColumn(columnCache.getColumn());
 
-        SerializedLambda joinLambda = LambdaUtils.resolve(builder.getJoinField());
+        LambdaMeta joinLambda = LambdaUtils.extract(builder.getJoinField());
 
         String joinFieldName = PropertyNamer.methodToProperty(joinLambda.getImplMethodName());
 
@@ -184,9 +198,9 @@ public class JoinColumnParseHelper {
             throw new RuntimeException("param error");
         }
 
-        SerializedLambda resolve = LambdaUtils.resolve(joinFieldFunc);
+        LambdaMeta resolve = LambdaUtils.extract(joinFieldFunc);
         // 附表实体类class
-        Class<?> joinEntityClass = resolve.getInstantiatedType();
+        Class<?> joinEntityClass = resolve.getInstantiatedClass();
 
 
 
@@ -226,9 +240,9 @@ public class JoinColumnParseHelper {
      */
     public static Field getFieldByJoinColumnAnnFieldFunc(SFunction<?, ?> function) {
         try {
-            SerializedLambda lambda = LambdaUtils.resolve(function);
+            LambdaMeta lambda = LambdaUtils.extract(function);
             String fieldName = PropertyNamer.methodToProperty(lambda.getImplMethodName());
-            Class<?> aClass = lambda.getInstantiatedType();
+            Class<?> aClass = lambda.getInstantiatedClass();
             return aClass.getDeclaredField(fieldName);
         } catch (NoSuchFieldException | SecurityException e) {
             return null;

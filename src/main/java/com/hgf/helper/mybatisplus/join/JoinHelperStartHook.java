@@ -12,6 +12,7 @@ import org.apache.ibatis.mapping.ResultMapping;
 import org.apache.ibatis.session.Configuration;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.stereotype.Component;
 
 import java.lang.reflect.Field;
 import java.util.List;
@@ -19,9 +20,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-/**
- *  多表联查初始化
- */
+@Component
 @Slf4j
 public class JoinHelperStartHook implements ApplicationRunner {
 
@@ -87,13 +86,10 @@ public class JoinHelperStartHook implements ApplicationRunner {
                 continue;
             }
 
-            Class<?> joinEntityClass = fieldInfo.getType();
+//            Class<?> associationFiletype = fieldInfo.getType();
+            Class<?> fieldRealType = ReflectUtil.getFieldRealType(fieldInfo);
 
-            if (ReflectUtil.isList(joinEntityClass)) {
-                joinEntityClass = ReflectUtil.getRealListClass(fieldInfo.getGenericType());
-            }
-
-            TableInfo associationTableInfo = TableInfoHelper.getTableInfo(joinEntityClass);
+            TableInfo associationTableInfo = TableInfoHelper.getTableInfo(fieldRealType);
             if (associationTableInfo == null) {
                 continue;
             }

@@ -2,7 +2,8 @@ package com.hgf.helper.mybatisplus;
 
 class MybatisPlusApplicationTests {
 
-    void contextLoads() {
-    }
 
+    public static void main(String[] args) {
+
+    }
 }

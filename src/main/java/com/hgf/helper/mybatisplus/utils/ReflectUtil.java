@@ -1,5 +1,8 @@
 package com.hgf.helper.mybatisplus.utils;
 
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONObject;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.extern.slf4j.Slf4j;
 
 import java.lang.reflect.Field;
@@ -16,6 +19,35 @@ import java.util.Set;
 @Slf4j
 public class ReflectUtil {
 
+    /**
+     * 获取指定对象所有属性值
+     */
+    public static JSONObject getParamValue(Object object, Class<?> tClass){
+        Field[] declaredFields = tClass.getDeclaredFields();
+
+        JSONObject valueJson = new JSONObject();
+        for (Field declaredField : declaredFields) {
+
+            String name = declaredField.getName();
+            declaredField.setAccessible(true);
+            Object o = null;
+            try {
+                o = declaredField.get(object);
+                /*if (declaredField.isAnnotationPresent(NotValue.class)){
+                    continue;
+                }*/
+                if (declaredField.isAnnotationPresent(JsonIgnore.class)){
+                    o = JSON.toJSONString(o);
+                }
+            } catch (IllegalAccessException e) {
+                e.printStackTrace();
+            }
+
+            valueJson.put(name, o);
+        }
+
+        return valueJson;
+    }
 
     /**
      * 获取父类泛型 类型集合
@@ -63,6 +95,7 @@ public class ReflectUtil {
             return null;
         }
     }
+
 
     /**
      * 获取属性真实的class

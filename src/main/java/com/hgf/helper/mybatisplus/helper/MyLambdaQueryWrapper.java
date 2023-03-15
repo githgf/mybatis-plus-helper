@@ -10,7 +10,6 @@ import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import com.baomidou.mybatisplus.core.toolkit.ArrayUtils;
 import com.baomidou.mybatisplus.core.toolkit.Assert;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
-import com.hgf.helper.mybatisplus.OriginSqlBo;
 import com.hgf.helper.mybatisplus.utils.CollectionUtil;
 import org.springframework.util.StringUtils;
 
@@ -22,10 +21,6 @@ import java.util.stream.Stream;
 
 import static com.baomidou.mybatisplus.core.enums.SqlKeyword.*;
 
-/**
- * 自定义的查询wrapper
- * @param <T>
- */
 public class MyLambdaQueryWrapper<T> extends AbstractLambdaWrapper<T, MyLambdaQueryWrapper<T>>
         implements Query<MyLambdaQueryWrapper<T>, T, SFunction<T, ?>> {
 
@@ -58,8 +53,8 @@ public class MyLambdaQueryWrapper<T> extends AbstractLambdaWrapper<T, MyLambdaQu
      * 不建议直接 new 该实例，使用 Wrappers.lambdaQuery(...)
      */
     MyLambdaQueryWrapper(T entity, Class<T> entityClass, SelectBuilder sqlSelect, AtomicInteger paramNameSeq,
-                         Map<String, Object> paramNameValuePairs, MergeSegments mergeSegments,
-                         SharedString lastSql, SharedString sqlComment, SharedString sqlFirst) {
+                       Map<String, Object> paramNameValuePairs, MergeSegments mergeSegments,
+                       SharedString lastSql, SharedString sqlComment, SharedString sqlFirst) {
         super.setEntity(entity);
         super.setEntityClass(entityClass);
         this.paramNameSeq = paramNameSeq;
@@ -69,6 +64,10 @@ public class MyLambdaQueryWrapper<T> extends AbstractLambdaWrapper<T, MyLambdaQu
         this.lastSql = lastSql;
         this.sqlComment = sqlComment;
         this.sqlFirst = sqlFirst;
+    }
+
+    protected void setSqlSelect(SelectBuilder sqlSelect) {
+        this.sqlSelect = sqlSelect;
     }
 
     /**
@@ -86,11 +85,11 @@ public class MyLambdaQueryWrapper<T> extends AbstractLambdaWrapper<T, MyLambdaQu
 
     /**
      * 过滤查询的字段信息(主键除外!)
-     * <p>例1: 只要 java 字段名以 "test" 开头的             -> select(i -&gt; i.getProperty().startsWith("test"))</p>
-     * <p>例2: 只要 java 字段属性是 CharSequence 类型的     -> select(TableFieldInfo::isCharSequence)</p>
-     * <p>例3: 只要 java 字段没有填充策略的                 -> select(i -&gt; i.getFieldFill() == FieldFill.DEFAULT)</p>
-     * <p>例4: 要全部字段                                   -> select(i -&gt; true)</p>
-     * <p>例5: 只要主键字段                                 -> select(i -&gt; false)</p>
+     * 例1: 只要 java 字段名以 "test" 开头的             -> select(i -&gt; i.getProperty().startsWith("test"))</p>
+     * 例2: 只要 java 字段属性是 CharSequence 类型的     -> select(TableFieldInfo::isCharSequence)</p>
+     * 例3: 只要 java 字段没有填充策略的                 -> select(i -&gt; i.getFieldFill() == FieldFill.DEFAULT)</p>
+     * 例4: 要全部字段                                   -> select(i -&gt; true)</p>
+     * 例5: 只要主键字段                                 -> select(i -&gt; false)</p>
      *
      * @param predicate 过滤方式
      * @return this
@@ -114,7 +113,7 @@ public class MyLambdaQueryWrapper<T> extends AbstractLambdaWrapper<T, MyLambdaQu
 
     /**
      * 用于生成嵌套 sql
-     * <p>故 sqlSelect 不向下传递</p>
+     * 故 sqlSelect 不向下传递</p>
      */
     @Override
     protected MyLambdaQueryWrapper<T> instance() {
@@ -169,6 +168,11 @@ public class MyLambdaQueryWrapper<T> extends AbstractLambdaWrapper<T, MyLambdaQu
         return typedThis;
     }
 
+    public MyLambdaQueryWrapper<T> select(String sql){
+        this.sqlSelect.getParts().add(sql);
+        return typedThis;
+    }
+
     public MyLambdaQueryWrapper<T> as(String asName){
         if (StringUtils.isEmpty(asName)) {
             return typedThis;
@@ -195,7 +199,7 @@ public class MyLambdaQueryWrapper<T> extends AbstractLambdaWrapper<T, MyLambdaQu
             return typedThis;
         }
         SqlKeyword mode = isAsc ? ASC : DESC;
-        doIt(true, ORDER_BY, () -> column, mode);
+        maybeDo(true, () -> appendSqlSegments(ORDER_BY, () -> column, mode));
         return typedThis;
     }
 
@@ -214,7 +218,7 @@ public class MyLambdaQueryWrapper<T> extends AbstractLambdaWrapper<T, MyLambdaQu
                 o = columnToString(sqlBo.getSFunction());
             } else if (!sqlBo.isColumn() && sqlBo.getObject() != null) {
 
-                o = sqlBo.isPreParam() ? formatSql("{0}", sqlBo.getObject()) : sqlBo.getObject();
+                o = sqlBo.isPreParam() ? formatSqlMaybeWithParam("{0}", null, sqlBo.getObject()) : sqlBo.getObject();
             }
 
             if (o != null) {
@@ -225,7 +229,7 @@ public class MyLambdaQueryWrapper<T> extends AbstractLambdaWrapper<T, MyLambdaQu
         if (!CollectionUtil.isEmpty(objects)) {
             String format = String.format(sqlFormat, objects);
 
-            doIt(true, () -> format, SqlKeyword.AND);
+            maybeDo(true, () -> appendSqlSegments(() -> format, SqlKeyword.AND));
         }
 
         return typedThis;
@@ -240,10 +244,11 @@ public class MyLambdaQueryWrapper<T> extends AbstractLambdaWrapper<T, MyLambdaQu
         Object[] objects = new Object[sFunctions.length];
 
         for (int i = 0; i < sFunctions.length; i++) {
-            String column = columnToString(sFunctions[i]);
+            SFunction<T, ?> sFunction = sFunctions[i];
+            Object o = columnToString(sFunction);
 
-            if (column != null) {
-                objects[i] = column;
+            if (o != null) {
+                objects[i] = o;
             }
         }
 
@@ -256,9 +261,8 @@ public class MyLambdaQueryWrapper<T> extends AbstractLambdaWrapper<T, MyLambdaQu
     }
 
     public MyLambdaQueryWrapper<T> groupBy(String column) {
-        return doIt(true, GROUP_BY, () -> column);
+        return maybeDo(true, () -> appendSqlSegments(GROUP_BY, () -> column));
     }
-
 
     @Override
     public String columnToString(SFunction<T, ?> column) {

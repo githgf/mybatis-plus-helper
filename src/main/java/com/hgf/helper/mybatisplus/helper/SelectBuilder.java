@@ -8,9 +8,6 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * 查询表字段sql构建器
- */
 @Getter
 @Setter
 public class SelectBuilder implements Serializable {

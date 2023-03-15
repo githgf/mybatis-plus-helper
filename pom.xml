@@ -9,14 +9,14 @@
     </parent>
     <groupId>io.github.githgf</groupId>
     <artifactId>mybatis-plus-helper</artifactId>
-    <version>0.0.7</version>
+    <version>3.5.1.1</version>
     <name>mybatis-plus</name>
     <packaging>jar</packaging>
 
     <description>mybatis-plus相关helper</description>
     <properties>
         <java.version>1.8</java.version>
-        <mp-plus.version>3.4.1</mp-plus.version>
+        <mp-plus.version>3.5.1</mp-plus.version>
         <maven-source-plugin.version>3.0.1</maven-source-plugin.version>
         <maven.compiler.source>8</maven.compiler.source>
         <maven.compiler.target>8</maven.compiler.target>
@@ -84,6 +84,14 @@
             <artifactId>spring-boot-starter-json</artifactId>
             <version>2.0.4.RELEASE</version>
             <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.alibaba</groupId>
+            <artifactId>fastjson</artifactId>
+            <version>1.2.31</version>
+            <scope>provided</scope>
+
         </dependency>
     </dependencies>
 

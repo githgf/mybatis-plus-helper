@@ -9,6 +9,7 @@ import com.baomidou.mybatisplus.core.toolkit.ArrayUtils;
 import com.baomidou.mybatisplus.core.toolkit.Assert;
 import com.baomidou.mybatisplus.core.toolkit.LambdaUtils;
 import com.baomidou.mybatisplus.core.toolkit.support.ColumnCache;
+import com.baomidou.mybatisplus.core.toolkit.support.LambdaMeta;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.baomidou.mybatisplus.core.toolkit.support.SerializedLambda;
 import com.hgf.helper.mybatisplus.helper.MyLambdaQueryWrapper;
@@ -126,6 +127,11 @@ public class JoinLambdaQueryWrapper<T> extends MyLambdaQueryWrapper<T> {
 
 
         String joinTableColumnPrefix = joinColumnInfo.getJoinTableAlias();
+        /*if (StringUtils.isEmpty(joinTableColumnPrefix) && joinColumnInfo.getQueryTypeJoinField() != null) {
+            joinTableColumnPrefix = JoinTableHelper.getJoinTableColumnPrefix(joinColumnInfo.getQueryTypeJoinField());
+        }*/
+
+
         // 已经存在此连接关系
         if (existsWrapper(joinTableColumnPrefix)) {
             return null;
@@ -182,7 +188,7 @@ public class JoinLambdaQueryWrapper<T> extends MyLambdaQueryWrapper<T> {
     protected String columnToString(SFunction<T, ?> column, boolean onlyColumn) {
 
         // 只要是查询条件拼接的，
-        return getColumn(LambdaUtils.resolve(column), false);
+        return getColumn(LambdaUtils.extract(column), false);
     }
 
     /**
@@ -194,14 +200,14 @@ public class JoinLambdaQueryWrapper<T> extends MyLambdaQueryWrapper<T> {
     @SafeVarargs
     public final JoinLambdaQueryWrapper<T> select(SFunction<T, ?>... columns) {
         if (ArrayUtils.isNotEmpty(columns)) {
-            Stream.of(columns).forEach(t -> super.getSelectBuilder().getParts().add(getColumn(LambdaUtils.resolve(t), true)));
+            Stream.of(columns).forEach(t -> super.getSelectBuilder().getParts().add(getColumn(LambdaUtils.extract(t), true)));
         }
         return typedThis;
     }
 
 
-    private String getColumn(SerializedLambda lambda, boolean onlyColumn) {
-        Class<?> aClass = lambda.getInstantiatedType();
+    private String getColumn(LambdaMeta lambda, boolean onlyColumn) {
+        Class<?> aClass = lambda.getInstantiatedClass();
         tryInitCache(aClass);
         String fieldName = PropertyNamer.methodToProperty(lambda.getImplMethodName());
         ColumnCache columnCache = getColumnCache(fieldName, aClass);
@@ -306,7 +312,9 @@ public class JoinLambdaQueryWrapper<T> extends MyLambdaQueryWrapper<T> {
 
         sqlSegment += (StringUtils.isEmpty(sql) ? sql : SqlKeyword.AND.getSqlSegment() + " " + sql);
 
-        return String.format("%s \n %s %s", sqlSegment, otherSegment, lastSql.getStringValue());
+        String format = String.format("%s \n %s %s", sqlSegment, otherSegment, lastSql.getStringValue());
+
+        return format;
     }
 
     protected String formatSqlSegment(String origin,String tableAlias) {
@@ -416,7 +424,6 @@ public class JoinLambdaQueryWrapper<T> extends MyLambdaQueryWrapper<T> {
     }
 
     @SafeVarargs
-    @Override
     public final JoinLambdaQueryWrapper<T> groupBy(boolean condition, SFunction<T, ?>... columns) {
         if (CollectionUtil.isEmpty(columns)) {
             return typedThis;
@@ -430,7 +437,7 @@ public class JoinLambdaQueryWrapper<T> extends MyLambdaQueryWrapper<T> {
 
         this.groupByColumns.addAll(
                 Stream.of(columns)
-                        .map(this::columnToString)
+                        .map(t -> columnToString(columnSqlInjectFilter(t)))
                         .collect(Collectors.toList())
         );
 
@@ -438,7 +445,29 @@ public class JoinLambdaQueryWrapper<T> extends MyLambdaQueryWrapper<T> {
     }
 
     @Override
-    public JoinLambdaQueryWrapper<T> groupBy(String column) {
+    public final JoinLambdaQueryWrapper<T> groupBy(boolean condition, SFunction<T, ?> column) {
+        if (column == null) {
+            return typedThis;
+        }
+
+
+        if (this.groupByColumns == null) {
+            this.groupByColumns = new HashSet<>();
+        }
+
+
+        this.groupByColumns.add(columnToString(columnSqlInjectFilter(column)));
+
+        return typedThis;
+    }
+
+    @Override
+    protected JoinLambdaQueryWrapper<T> instance() {
+        return new JoinLambdaQueryWrapper<>(getEntityClass(), getQueryType(), paramNameSeq, paramNameValuePairs);
+    }
+
+    @Override
+    public MyLambdaQueryWrapper<T> groupBy(String column) {
         if (this.groupByColumns == null) {
             this.groupByColumns = new HashSet<>();
         }
@@ -452,16 +481,10 @@ public class JoinLambdaQueryWrapper<T> extends MyLambdaQueryWrapper<T> {
     }
 
     @Override
-    protected JoinLambdaQueryWrapper<T> instance() {
-        return new JoinLambdaQueryWrapper<>(getEntityClass(), getQueryType(), paramNameSeq, paramNameValuePairs);
-    }
-
-    @Override
     public JoinLambdaQueryWrapper<T> groupBy(SFunction<T, ?> column) {
         return groupBy(true, column);
     }
 
-    @Override
     public JoinLambdaQueryWrapper<T> groupBy(SFunction<T, ?>... columns) {
         return groupBy(true, columns);
     }
@@ -471,14 +494,27 @@ public class JoinLambdaQueryWrapper<T> extends MyLambdaQueryWrapper<T> {
         return orderBy(true, true, column);
     }
 
-    @Override
     public JoinLambdaQueryWrapper<T> orderByAsc(SFunction<T, ?>... columns) {
         return orderBy(true, true, columns);
     }
 
-    @Override
     public JoinLambdaQueryWrapper<T> orderByAsc(boolean condition, SFunction<T, ?>... columns) {
         return orderBy(condition, true, columns);
+    }
+
+    @Override
+    public MyLambdaQueryWrapper<T> orderBy(boolean isAsc, String column) {
+        if (StringUtils.isEmpty(column)) {
+            return typedThis;
+        }
+        if (this.orderByColumns == null) {
+            this.orderByColumns = new HashSet<>();
+        }
+
+
+        this.orderByColumns.add(new OrderByCache(!isAsc, column));
+
+        return typedThis;
     }
 
     @Override
@@ -486,18 +522,15 @@ public class JoinLambdaQueryWrapper<T> extends MyLambdaQueryWrapper<T> {
         return orderBy(true, false, column);
     }
 
-    @Override
     public JoinLambdaQueryWrapper<T> orderByDesc(SFunction<T, ?>... columns) {
         return orderBy(true, false, columns);
     }
 
-    @Override
     public JoinLambdaQueryWrapper<T> orderByDesc(boolean condition, SFunction<T, ?>... columns) {
         return orderBy(true, false, columns);
     }
 
     @SafeVarargs
-    @Override
     public final JoinLambdaQueryWrapper<T> orderBy(boolean condition, boolean isAsc, SFunction<T, ?>... columns) {
         if (CollectionUtil.isEmpty(columns)) {
             return typedThis;
@@ -509,7 +542,7 @@ public class JoinLambdaQueryWrapper<T> extends MyLambdaQueryWrapper<T> {
 
 
         Set<OrderByCache> collect = Stream.of(columns)
-                .map(t -> new OrderByCache(!isAsc, columnToString(t)))
+                .map(t -> new OrderByCache(!isAsc, columnToString(columnSqlInjectFilter(t))))
                 .collect(Collectors.toSet());
         this.orderByColumns.addAll(collect);
 
@@ -517,16 +550,15 @@ public class JoinLambdaQueryWrapper<T> extends MyLambdaQueryWrapper<T> {
     }
 
     @Override
-    public JoinLambdaQueryWrapper<T> orderBy(boolean isAsc, String column) {
-        if (StringUtils.isEmpty(column)) {
+    public final JoinLambdaQueryWrapper<T> orderBy(boolean condition, boolean isAsc, SFunction<T, ?> column) {
+        if (column == null) {
             return typedThis;
         }
         if (this.orderByColumns == null) {
             this.orderByColumns = new HashSet<>();
         }
-
-
-        this.orderByColumns.add(new OrderByCache(!isAsc, column));
+        OrderByCache orderByCache = new OrderByCache(!isAsc, columnToString(columnSqlInjectFilter(column)));
+        this.orderByColumns.add(orderByCache);
 
         return typedThis;
     }
