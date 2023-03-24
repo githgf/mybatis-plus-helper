@@ -51,8 +51,6 @@ public class ReflectUtil {
 
     /**
      * 获取父类泛型 类型集合
-     * @param clazz
-     * @return
      */
     public static Type[] getGenericParamClassArray(Class<?> clazz){
         ParameterizedType genericSuperclass = getType(clazz);

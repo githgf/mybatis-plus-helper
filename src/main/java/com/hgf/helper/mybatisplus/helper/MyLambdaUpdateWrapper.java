@@ -136,7 +136,6 @@ public class MyLambdaUpdateWrapper<T> extends AbstractLambdaWrapper<T, MyLambdaU
      *     WHEN caseMap.keys[1] THEN caseMap.values[1]
      *     WHEN caseMap.keys[2] THEN caseMap.values[2]
      *     END)
-     * </p>
      */
     public MyLambdaUpdateWrapper<T> caseSet(SFunction<T, ?> columns, Map<Object,Object> caseMap, SFunction<T, ?> caseColumns) {
         String columnsToString = super.columnToString(columns);
