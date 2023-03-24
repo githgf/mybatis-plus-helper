@@ -338,7 +338,7 @@ public class BaseServiceImpl<M extends BaseMapper<T>, T> extends ServiceImpl<M,T
 
         Object fieldValue = null;
         try {
-            fieldValue = FieldUtils.readField(entity, keyProperty);
+            fieldValue = FieldUtils.readField(entity, keyProperty, true);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
